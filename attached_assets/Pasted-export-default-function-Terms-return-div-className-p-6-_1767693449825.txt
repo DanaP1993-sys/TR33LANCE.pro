@@ -1,0 +1,41 @@
+export default function Terms() {
+  return (
+    <div className="p-6 text-white bg-zinc-900 min-h-screen">
+      <h1 className="text-3xl font-bold mb-4">Tree-Lance Terms & Conditions</h1>
+
+      <h2 className="text-xl font-semibold mt-4">Independent Contractors</h2>
+      <p className="mt-2">
+        All contractors using Tree-Lance are independent service providers. Tree-Lance does not employ, supervise, or guarantee the performance of any contractor. Contractors are fully responsible for their services, equipment, safety, and compliance with local regulations.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-4">Liability</h2>
+      <p className="mt-2">
+        Tree-Lance is a technology platform connecting homeowners and contractors. Tree-Lance assumes no liability for any damages, injuries, property loss, or service failures caused by contractors or homeowners. All disputes are between the contractor and homeowner directly.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-4">Payments</h2>
+      <p className="mt-2">
+        Payments are processed via Stripe. Tree-Lance automatically collects a 20% service fee. Contractors receive 80% of the job payment. Tree-Lance is not responsible for contractor performance or refunds beyond processing the payment.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-4">Insurance</h2>
+      <p className="mt-2">
+        Contractors are required to maintain valid insurance, licensing, and bonding. Tree-Lance may verify documentation but assumes no responsibility for contractor coverage or claims.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-4">Homeowner Responsibilities</h2>
+      <p className="mt-2">
+        Homeowners must provide accurate job descriptions and ensure access to the worksite. Tree-Lance does not guarantee job completion beyond connecting homeowners to contractors.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-4">Governing Law</h2>
+      <p className="mt-2">
+        These terms are governed by the laws of the state in which Tree-Lance operates. Any disputes shall be resolved in the applicable courts.
+      </p>
+
+      <p className="mt-6 text-sm text-white/60">
+        Last updated: January 2026
+      </p>
+    </div>
+  )
+}
