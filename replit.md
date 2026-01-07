@@ -84,6 +84,28 @@ Phase 4 - Beta: Field testing with contractors
 Hardware targets: Microsoft HoloLens 2, Magic Leap 2, Nreal Air
 Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 
+## High-Tech Feature Expansion Roadmap
+
+### Phase 1 - AI + Smart Scheduling
+- Computer vision for tree species/disease detection
+- AI-powered smart scheduling based on location, skill, risk
+- AR-enabled mobile previews
+
+### Phase 2 - AR Glasses + Live Streaming
+- Smart glasses with holographic overlays
+- Live video streaming from contractor to homeowner
+- AI-assisted annotations in feed
+
+### Phase 3 - IoT + Drones
+- Smart tree sensors for health monitoring
+- Drone integration for aerial mapping
+- 3D site map generation
+
+### Phase 4 - Smart Contracts + Full AR
+- Blockchain-inspired milestone payments
+- Full AR collaboration between all parties
+- Gamification with badges and leaderboards
+
 ## Recent Changes
 - 2026-01-07: Added Direct Messaging feature (user-to-user chat with job context)
 - 2026-01-07: Added Messages page to frontend navigation
