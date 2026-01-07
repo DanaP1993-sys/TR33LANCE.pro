@@ -79,13 +79,16 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", requireAuth("contractor"), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid job ID" });
       }
-      const job = await storage.updateJob(id, req.body);
+      const job = await storage.updateJob(id, {
+        contractorId: req.user.id,
+        status: "accepted"
+      });
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
