@@ -74,6 +74,16 @@ requested → accepted → in_progress → completed/cancelled
 - Platform Fee: 20%
 - Contractor Payout: 80%
 
+## Future Roadmap: AR Smart Glasses Mode
+
+Phase 1 - Prototype: Mobile AR simulation, WebSocket live updates, basic AI detection
+Phase 2 - Glasses Integration: Unity/WebXR for HoloLens/Magic Leap, voice/gesture commands
+Phase 3 - Full AI: Pruning guidance, hazard spatial mapping, autonomous overlays
+Phase 4 - Beta: Field testing with contractors
+
+Hardware targets: Microsoft HoloLens 2, Magic Leap 2, Nreal Air
+Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
+
 ## Recent Changes
 - 2026-01-07: Added Direct Messaging feature (user-to-user chat with job context)
 - 2026-01-07: Added Messages page to frontend navigation

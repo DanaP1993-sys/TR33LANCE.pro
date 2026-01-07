@@ -6,6 +6,7 @@ import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { registerChatRoutes } from "./replit_integrations/chat";
+import { broadcastJobUpdate, broadcastToUser } from "./websocket";
 import OpenAI from "openai";
 
 export async function registerRoutes(
@@ -76,6 +77,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: parsed.error.errors });
       }
       const job = await storage.createJob(parsed.data);
+      broadcastJobUpdate(job.id, { action: 'created', job });
       res.status(201).json(job);
     } catch (error) {
       res.status(500).json({ error: "Failed to create job" });
@@ -95,6 +97,7 @@ export async function registerRoutes(
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
+      broadcastJobUpdate(id, { action: 'accepted', job });
       res.json(job);
     } catch (error) {
       res.status(500).json({ error: "Failed to update job" });
@@ -116,6 +119,7 @@ export async function registerRoutes(
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
+      broadcastJobUpdate(id, { action: 'status_changed', status, job });
       res.json(job);
     } catch (error) {
       res.status(500).json({ error: "Failed to update job status" });

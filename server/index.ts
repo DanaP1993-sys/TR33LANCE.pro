@@ -5,9 +5,12 @@ import { createServer } from "http";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { setupWebSocket } from './websocket';
 
 const app = express();
 const httpServer = createServer(app);
+
+setupWebSocket(httpServer);
 
 declare module "http" {
   interface IncomingMessage {
