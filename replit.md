@@ -52,6 +52,22 @@ Full-stack marketplace connecting homeowners with tree service contractors.
   - POST /api/messages - Send a message
   - PATCH /api/messages/:id/read - Mark message as read
 
+### IoT & Drone Integration (Phase 3 - LIVE)
+- Drone Surveys: /api/drones CRUD
+  - GET /api/drones - List all drone surveys
+  - GET /api/drones/:id - Get survey details
+  - POST /api/drones - Schedule new survey
+  - PATCH /api/drones/:id - Update survey status/findings
+- Tree Sensors: /api/sensors CRUD
+  - GET /api/sensors - List all IoT sensors
+  - GET /api/sensors/:id - Get sensor details
+  - POST /api/sensors - Deploy new sensor
+  - PATCH /api/sensors/:id - Update sensor data
+- Sensor Readings: /api/sensors/:id/readings
+  - GET - Historical readings for a sensor
+  - POST - Record new sensor reading
+- Seed Demo Data: POST /api/seed-iot
+
 ## API Response Format (Flutter Compatible)
 
 The `/api/ai/chat` endpoint returns OpenAI-standard format:
@@ -138,6 +154,9 @@ Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 - Ecosystem health monitoring
 
 ## Recent Changes
+- 2026-01-07: Added IoT Command Center with drone surveys and smart tree sensors (Phase 3 LIVE)
+- 2026-01-07: Added /api/drones, /api/sensors, /api/sensors/:id/readings endpoints
+- 2026-01-07: Added IoT Dashboard frontend page with real-time sensor monitoring
 - 2026-01-07: Added Direct Messaging feature (user-to-user chat with job context)
 - 2026-01-07: Added Messages page to frontend navigation
 - 2026-01-07: Added AI Integration (OpenAI via Replit AI Integrations)

@@ -167,3 +167,99 @@ export const insertDirectMessageSchema = createInsertSchema(directMessages, {
 
 export type InsertDirectMessage = InferInsertModel<typeof directMessages>;
 export type DirectMessage = InferSelectModel<typeof directMessages>;
+
+// Drone Surveys table for aerial mapping
+export const droneSurveys = pgTable("drone_surveys", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id"),
+  contractorId: varchar("contractor_id"),
+  lat: real("lat").notNull(),
+  lng: real("lng").notNull(),
+  altitude: real("altitude").notNull().default(50),
+  status: text("status").notNull().default("scheduled"),
+  mapUrl: text("map_url"),
+  modelUrl: text("model_url"),
+  imageCount: integer("image_count").default(0),
+  areaSquareMeters: real("area_square_meters"),
+  findings: text("findings"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertDroneSurveySchema = createInsertSchema(droneSurveys, {
+  jobId: z.number().optional(),
+  contractorId: z.string().optional(),
+  lat: z.number(),
+  lng: z.number(),
+  altitude: z.number().optional(),
+  status: z.string().optional(),
+  mapUrl: z.string().optional(),
+  modelUrl: z.string().optional(),
+  imageCount: z.number().optional(),
+  areaSquareMeters: z.number().optional(),
+  findings: z.string().optional(),
+});
+
+export type InsertDroneSurvey = InferInsertModel<typeof droneSurveys>;
+export type DroneSurvey = InferSelectModel<typeof droneSurveys>;
+
+// Tree Sensors table for IoT monitoring
+export const treeSensors = pgTable("tree_sensors", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  treeId: varchar("tree_id").notNull(),
+  name: text("name").notNull(),
+  lat: real("lat").notNull(),
+  lng: real("lng").notNull(),
+  species: text("species"),
+  soilMoisture: real("soil_moisture"),
+  structuralHealth: real("structural_health"),
+  leafHealth: real("leaf_health"),
+  temperature: real("temperature"),
+  humidity: real("humidity"),
+  lastReading: timestamp("last_reading"),
+  status: text("status").notNull().default("active"),
+  batteryLevel: real("battery_level").default(100),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTreeSensorSchema = createInsertSchema(treeSensors, {
+  treeId: z.string(),
+  name: z.string(),
+  lat: z.number(),
+  lng: z.number(),
+  species: z.string().optional(),
+  soilMoisture: z.number().optional(),
+  structuralHealth: z.number().optional(),
+  leafHealth: z.number().optional(),
+  temperature: z.number().optional(),
+  humidity: z.number().optional(),
+  status: z.string().optional(),
+  batteryLevel: z.number().optional(),
+});
+
+export type InsertTreeSensor = InferInsertModel<typeof treeSensors>;
+export type TreeSensor = InferSelectModel<typeof treeSensors>;
+
+// Sensor Readings table for historical data
+export const sensorReadings = pgTable("sensor_readings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sensorId: integer("sensor_id").notNull(),
+  soilMoisture: real("soil_moisture"),
+  structuralHealth: real("structural_health"),
+  leafHealth: real("leaf_health"),
+  temperature: real("temperature"),
+  humidity: real("humidity"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSensorReadingSchema = createInsertSchema(sensorReadings, {
+  sensorId: z.number(),
+  soilMoisture: z.number().optional(),
+  structuralHealth: z.number().optional(),
+  leafHealth: z.number().optional(),
+  temperature: z.number().optional(),
+  humidity: z.number().optional(),
+});
+
+export type InsertSensorReading = InferInsertModel<typeof sensorReadings>;
+export type SensorReading = InferSelectModel<typeof sensorReadings>;

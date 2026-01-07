@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema } from "@shared/schema";
+import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema, insertDroneSurveySchema, insertTreeSensorSchema, insertSensorReadingSchema } from "@shared/schema";
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -604,6 +604,214 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Job analysis error:", error.message);
       res.status(500).json({ error: "Failed to analyze job" });
+    }
+  });
+
+  // Drone Surveys API
+  app.get("/api/drones", async (req, res) => {
+    try {
+      const surveys = await storage.getDroneSurveys();
+      res.json(surveys);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch drone surveys" });
+    }
+  });
+
+  app.get("/api/drones/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const survey = await storage.getDroneSurvey(id);
+      if (!survey) {
+        return res.status(404).json({ error: "Survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch survey" });
+    }
+  });
+
+  app.post("/api/drones", async (req, res) => {
+    try {
+      const parsed = insertDroneSurveySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const survey = await storage.createDroneSurvey(parsed.data);
+      res.status(201).json(survey);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create drone survey" });
+    }
+  });
+
+  app.patch("/api/drones/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const survey = await storage.updateDroneSurvey(id, req.body);
+      if (!survey) {
+        return res.status(404).json({ error: "Survey not found" });
+      }
+      res.json(survey);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update survey" });
+    }
+  });
+
+  // Tree Sensors API
+  app.get("/api/sensors", async (req, res) => {
+    try {
+      const sensors = await storage.getTreeSensors();
+      res.json(sensors);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sensors" });
+    }
+  });
+
+  app.get("/api/sensors/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const sensor = await storage.getTreeSensor(id);
+      if (!sensor) {
+        return res.status(404).json({ error: "Sensor not found" });
+      }
+      res.json(sensor);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sensor" });
+    }
+  });
+
+  app.post("/api/sensors", async (req, res) => {
+    try {
+      const parsed = insertTreeSensorSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const sensor = await storage.createTreeSensor(parsed.data);
+      res.status(201).json(sensor);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create sensor" });
+    }
+  });
+
+  app.patch("/api/sensors/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const sensor = await storage.updateTreeSensor(id, req.body);
+      if (!sensor) {
+        return res.status(404).json({ error: "Sensor not found" });
+      }
+      res.json(sensor);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update sensor" });
+    }
+  });
+
+  // Sensor Readings API
+  app.get("/api/sensors/:id/readings", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const readings = await storage.getSensorReadings(id);
+      res.json(readings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch readings" });
+    }
+  });
+
+  app.post("/api/sensors/:id/readings", async (req, res) => {
+    try {
+      const sensorId = parseInt(req.params.id);
+      const parsed = insertSensorReadingSchema.safeParse({ ...req.body, sensorId });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const reading = await storage.createSensorReading(parsed.data);
+      
+      // Update sensor's last reading and current values
+      await storage.updateTreeSensor(sensorId, {
+        lastReading: new Date(),
+        soilMoisture: parsed.data.soilMoisture,
+        structuralHealth: parsed.data.structuralHealth,
+        leafHealth: parsed.data.leafHealth,
+        temperature: parsed.data.temperature,
+        humidity: parsed.data.humidity,
+      });
+      
+      res.status(201).json(reading);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create reading" });
+    }
+  });
+
+  // Seed IoT demo data
+  app.post("/api/seed-iot", async (req, res) => {
+    try {
+      const existingSensors = await storage.getTreeSensors();
+      const existingSurveys = await storage.getDroneSurveys();
+      
+      if (existingSensors.length === 0) {
+        await storage.createTreeSensor({
+          treeId: "OAK-001",
+          name: "Heritage Oak - Front Yard",
+          lat: 29.7604,
+          lng: -95.3698,
+          species: "Live Oak",
+          soilMoisture: 72,
+          structuralHealth: 95,
+          leafHealth: 88,
+          temperature: 78,
+          humidity: 65,
+          batteryLevel: 94
+        });
+        await storage.createTreeSensor({
+          treeId: "PINE-002",
+          name: "Loblolly Pine - Backyard",
+          lat: 29.7610,
+          lng: -95.3705,
+          species: "Loblolly Pine",
+          soilMoisture: 58,
+          structuralHealth: 82,
+          leafHealth: 91,
+          temperature: 76,
+          humidity: 62,
+          batteryLevel: 87
+        });
+        await storage.createTreeSensor({
+          treeId: "MAPLE-003",
+          name: "Red Maple - Side Yard",
+          lat: 29.7598,
+          lng: -95.3692,
+          species: "Red Maple",
+          soilMoisture: 45,
+          structuralHealth: 78,
+          leafHealth: 72,
+          temperature: 79,
+          humidity: 58,
+          batteryLevel: 23,
+          status: "warning"
+        });
+      }
+      
+      if (existingSurveys.length === 0) {
+        await storage.createDroneSurvey({
+          lat: 29.7604,
+          lng: -95.3698,
+          altitude: 50,
+          status: "completed",
+          imageCount: 127,
+          areaSquareMeters: 2500,
+          findings: "Identified 3 mature trees, 1 with potential crown dieback. Recommended inspection for OAK-001."
+        });
+        await storage.createDroneSurvey({
+          lat: 29.7650,
+          lng: -95.3720,
+          altitude: 75,
+          status: "scheduled",
+          areaSquareMeters: 4800
+        });
+      }
+      
+      res.json({ message: "IoT demo data seeded" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to seed IoT data" });
     }
   });
 

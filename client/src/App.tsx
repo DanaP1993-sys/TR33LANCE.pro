@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import Terms from "@/pages/Terms";
 import PostJob from "@/pages/PostJob";
 import Messages from "@/pages/Messages";
+import IoTDashboard from "@/pages/IoTDashboard";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 
@@ -17,6 +18,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/post" component={PostJob} />
         <Route path="/messages" component={Messages} />
+        <Route path="/iot" component={IoTDashboard} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>

@@ -5,7 +5,11 @@ import {
   type Dispute, type InsertDispute,
   type Notification, type InsertNotification,
   type DirectMessage, type InsertDirectMessage,
-  users, jobs, contractors, disputes, notifications, directMessages
+  type DroneSurvey, type InsertDroneSurvey,
+  type TreeSensor, type InsertTreeSensor,
+  type SensorReading, type InsertSensorReading,
+  users, jobs, contractors, disputes, notifications, directMessages,
+  droneSurveys, treeSensors, sensorReadings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -46,6 +50,22 @@ export interface IStorage {
   sendDirectMessage(message: InsertDirectMessage): Promise<DirectMessage>;
   markDirectMessageRead(id: number): Promise<DirectMessage | undefined>;
   markConversationRead(userId: string, otherUserId: string): Promise<void>;
+  
+  // Drone Surveys
+  getDroneSurveys(): Promise<DroneSurvey[]>;
+  getDroneSurvey(id: number): Promise<DroneSurvey | undefined>;
+  createDroneSurvey(survey: InsertDroneSurvey): Promise<DroneSurvey>;
+  updateDroneSurvey(id: number, updates: Partial<DroneSurvey>): Promise<DroneSurvey | undefined>;
+  
+  // Tree Sensors
+  getTreeSensors(): Promise<TreeSensor[]>;
+  getTreeSensor(id: number): Promise<TreeSensor | undefined>;
+  createTreeSensor(sensor: InsertTreeSensor): Promise<TreeSensor>;
+  updateTreeSensor(id: number, updates: Partial<TreeSensor>): Promise<TreeSensor | undefined>;
+  
+  // Sensor Readings
+  getSensorReadings(sensorId: number): Promise<SensorReading[]>;
+  createSensorReading(reading: InsertSensorReading): Promise<SensorReading>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -241,6 +261,64 @@ export class DatabaseStorage implements IStorage {
         eq(directMessages.receiverId, userId),
         eq(directMessages.read, false)
       ));
+  }
+
+  // Drone Surveys
+  async getDroneSurveys(): Promise<DroneSurvey[]> {
+    return db.select().from(droneSurveys).orderBy(desc(droneSurveys.createdAt));
+  }
+
+  async getDroneSurvey(id: number): Promise<DroneSurvey | undefined> {
+    const [survey] = await db.select().from(droneSurveys).where(eq(droneSurveys.id, id));
+    return survey;
+  }
+
+  async createDroneSurvey(survey: InsertDroneSurvey): Promise<DroneSurvey> {
+    const [newSurvey] = await db.insert(droneSurveys).values(survey).returning();
+    return newSurvey;
+  }
+
+  async updateDroneSurvey(id: number, updates: Partial<DroneSurvey>): Promise<DroneSurvey | undefined> {
+    const [updated] = await db.update(droneSurveys)
+      .set(updates)
+      .where(eq(droneSurveys.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Tree Sensors
+  async getTreeSensors(): Promise<TreeSensor[]> {
+    return db.select().from(treeSensors).orderBy(desc(treeSensors.createdAt));
+  }
+
+  async getTreeSensor(id: number): Promise<TreeSensor | undefined> {
+    const [sensor] = await db.select().from(treeSensors).where(eq(treeSensors.id, id));
+    return sensor;
+  }
+
+  async createTreeSensor(sensor: InsertTreeSensor): Promise<TreeSensor> {
+    const [newSensor] = await db.insert(treeSensors).values(sensor).returning();
+    return newSensor;
+  }
+
+  async updateTreeSensor(id: number, updates: Partial<TreeSensor>): Promise<TreeSensor | undefined> {
+    const [updated] = await db.update(treeSensors)
+      .set(updates)
+      .where(eq(treeSensors.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Sensor Readings
+  async getSensorReadings(sensorId: number): Promise<SensorReading[]> {
+    return db.select().from(sensorReadings)
+      .where(eq(sensorReadings.sensorId, sensorId))
+      .orderBy(desc(sensorReadings.createdAt));
+  }
+
+  async createSensorReading(reading: InsertSensorReading): Promise<SensorReading> {
+    const [newReading] = await db.insert(sensorReadings).values(reading).returning();
+    return newReading;
   }
 }
 
