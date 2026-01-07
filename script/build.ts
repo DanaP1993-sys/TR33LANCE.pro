@@ -5,40 +5,19 @@ import { rm, readFile } from "fs/promises";
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
 const allowlist = [
-  "@google/generative-ai",
-  "axios",
-  "connect-pg-simple",
-  "cors",
-  "date-fns",
-  "drizzle-orm",
-  "drizzle-zod",
-  "express",
-  "express-rate-limit",
-  "express-session",
-  "jsonwebtoken",
-  "memorystore",
-  "multer",
-  "nanoid",
-  "nodemailer",
-  "openai",
-  "passport",
-  "passport-local",
-  "pg",
-  "stripe",
-  "uuid",
-  "ws",
-  "xlsx",
-  "zod",
-  "zod-validation-error",
+  "express", "cors", "axios", "openai", "stripe", "uuid", "zod", "dotenv"
 ];
 
 async function buildAll() {
+  console.log("Cleaning dist folder...");
   await rm("dist", { recursive: true, force: true });
 
-  console.log("building client...");
+  console.log("Building client...");
+  const clientStart = Date.now();
   await viteBuild();
+  console.log(`Client build completed in ${Date.now() - clientStart}ms`);
 
-  console.log("building server...");
+  console.log("Building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
   const allDeps = [
     ...Object.keys(pkg.dependencies || {}),
@@ -46,12 +25,13 @@ async function buildAll() {
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
 
+  const serverStart = Date.now();
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
     format: "esm",
-    outfile: "dist/index.js",
+    outfile: "dist/server.js",
     define: {
       "process.env.NODE_ENV": `"${process.env.NODE_ENV || "production"}"`,
     },
@@ -62,14 +42,17 @@ async function buildAll() {
     banner: {
       js: `
 /*
-  © 2024 Dana Palmer. All rights reserved.
+  © 2026 Dana Palmer. All rights reserved.
   Tree-Lance Platform
-  Bundled server module
+  Bundled server module (ESM)
 */
 import { createRequire } from "module"; const require = createRequire(import.meta.url);
     `,
     },
   });
+
+  console.log(`Server build completed in ${Date.now() - serverStart}ms`);
+  console.log("✅ Tree-Lance build complete! Ready for deployment.");
 }
 
 buildAll().catch((err) => {
