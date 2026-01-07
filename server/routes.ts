@@ -246,6 +246,59 @@ export async function registerRoutes(
     }
   });
 
+  // Profile API
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...safeUser } = user;
+      const averageRating = user.ratings && user.ratings.length > 0
+        ? user.ratings.reduce((a, b) => a + b, 0) / user.ratings.length
+        : 0;
+      res.json({ ...safeUser, averageRating });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAuth(), async (req: any, res) => {
+    try {
+      if (req.user.id !== req.params.id) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+      const { name, verified } = req.body;
+      const user = await storage.updateUser(req.params.id, { name, verified });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.post("/api/users/:id/ratings", requireAuth(), async (req: any, res) => {
+    try {
+      const { rating } = req.body;
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+      const user = await storage.addRating(req.params.id, rating);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const averageRating = user.ratings && user.ratings.length > 0
+        ? user.ratings.reduce((a, b) => a + b, 0) / user.ratings.length
+        : 0;
+      res.json({ averageRating, totalRatings: user.ratings?.length || 0 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add rating" });
+    }
+  });
+
   // Seed contractors if none exist
   app.post("/api/seed", async (req, res) => {
     try {
