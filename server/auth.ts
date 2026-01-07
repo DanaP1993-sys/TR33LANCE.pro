@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-const SECRET = process.env.JWT_SECRET!;
+const SECRET = process.env.JWT_SECRET || "dev_secret_tree_lance_key";
 
 export function hashPassword(password: string) {
   return bcrypt.hash(password, 10);

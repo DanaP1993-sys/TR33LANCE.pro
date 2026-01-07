@@ -2,6 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertContractorSchema } from "@shared/schema";
+import { hashPassword, comparePassword, createToken } from "./auth";
+import { requireAuth } from "./middleware/auth";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -11,6 +13,47 @@ export async function registerRoutes(
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Auth routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { username, password, role } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      const user = await storage.createUser({
+        username,
+        role: role || "homeowner",
+        password: await hashPassword(password)
+      });
+
+      res.json({ token: createToken(user) });
+    } catch (error) {
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user || !(await comparePassword(password, user.password))) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      res.json({ token: createToken(user) });
+    } catch (error) {
+      res.status(500).json({ error: "Login failed" });
+    }
   });
 
   // Jobs API
