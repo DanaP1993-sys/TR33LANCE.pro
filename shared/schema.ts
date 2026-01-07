@@ -22,11 +22,12 @@ export type User = typeof users.$inferSelect;
 // Jobs table
 export const jobs = pgTable("jobs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  title: text("title").notNull(),
+  homeownerId: varchar("homeowner_id").notNull(),
+  contractorId: varchar("contractor_id"),
+  title: text("title"),
   description: text("description").notNull(),
-  price: real("price").notNull(),
-  status: text("status").notNull().default("open"),
-  contractor: text("contractor"),
+  price: real("price"),
+  status: text("status").notNull().default("requested"),
   lat: real("lat").notNull().default(29.7604),
   lng: real("lng").notNull().default(-95.3698),
   createdAt: timestamp("created_at").notNull().defaultNow(),
