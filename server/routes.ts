@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertJobSchema, insertContractorSchema } from "@shared/schema";
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -182,6 +183,66 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to calculate payout" });
+    }
+  });
+
+  // Stripe publishable key for frontend
+  app.get("/api/stripe/key", async (req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error) {
+      res.status(500).json({ error: "Stripe not configured" });
+    }
+  });
+
+  // Create checkout session for job payment
+  app.post("/api/stripe/checkout", async (req, res) => {
+    try {
+      const { jobId, amount, contractorStripeId } = req.body;
+
+      if (!amount || typeof amount !== 'number') {
+        return res.status(400).json({ error: "Amount is required" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const amountCents = Math.round(amount * 100);
+      const platformFeeCents = Math.round(amountCents * 0.2);
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Tree Service Job #${jobId || 'N/A'}`,
+              description: 'Tree-Lance job payment'
+            },
+            unit_amount: amountCents,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/payment/cancel`,
+        metadata: {
+          jobId: jobId?.toString() || '',
+          contractorStripeId: contractorStripeId || '',
+          platformFee: platformFeeCents.toString(),
+        }
+      });
+
+      res.json({ 
+        sessionId: session.id, 
+        url: session.url,
+        platformFee: platformFeeCents / 100,
+        contractorPayout: (amountCents - platformFeeCents) / 100
+      });
+    } catch (error: any) {
+      console.error('Stripe checkout error:', error.message);
+      res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
 
