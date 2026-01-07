@@ -22,8 +22,8 @@ export default function PostJob() {
   const [, setLocation] = useLocation();
   const { register, handleSubmit, formState: { errors } } = useForm<JobForm>();
 
-  const onSubmit = (data: JobForm) => {
-    addJob({
+  const onSubmit = async (data: JobForm) => {
+    await addJob({
       title: data.title,
       description: data.description,
       price: Number(data.price),
@@ -36,10 +36,8 @@ export default function PostJob() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <Link href="/">
-          <a className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-          </a>
+        <Link href="/" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
       </div>
 

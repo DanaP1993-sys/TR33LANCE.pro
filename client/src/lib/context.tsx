@@ -5,11 +5,11 @@ export interface Job {
   title: string;
   description: string;
   price: number;
-  status: 'open' | 'accepted' | 'completed';
+  status: string;
   contractor: string | null;
   lat: number;
   lng: number;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface Contractor {
@@ -21,84 +21,105 @@ export interface Contractor {
   stripeId: string;
 }
 
-const initialJobs: Job[] = [
-  {
-    id: 1,
-    title: 'Oak Tree Trimming',
-    description: 'Large oak tree in front yard needs trimming away from power lines.',
-    price: 450,
-    status: 'open',
-    contractor: null,
-    lat: 29.7604,
-    lng: -95.3698,
-    createdAt: new Date()
-  },
-  {
-    id: 2,
-    title: 'Stump Removal',
-    description: 'Old pine stump in backyard, approx 2ft diameter.',
-    price: 200,
-    status: 'accepted',
-    contractor: 'Green Leaf Crew',
-    lat: 29.7400,
-    lng: -95.3900,
-    createdAt: new Date(Date.now() - 86400000)
-  },
-  {
-    id: 3,
-    title: 'Emergency Storm Cleanup',
-    description: 'Fallen branch blocking driveway after storm.',
-    price: 600,
-    status: 'open',
-    contractor: null,
-    lat: 29.7800,
-    lng: -95.3500,
-    createdAt: new Date(Date.now() - 3600000)
-  }
-];
-
-export const contractors: Contractor[] = [
-  { id: 1, name: 'Green Leaf Crew', rating: 4.8, lat: 29.75, lng: -95.37, stripeId: 'acct_1' },
-  { id: 2, name: 'Texas Tree Pros', rating: 4.9, lat: 29.77, lng: -95.34, stripeId: 'acct_2' },
-  { id: 3, name: 'Arbor Experts', rating: 4.7, lat: 29.73, lng: -95.40, stripeId: 'acct_3' }
-];
-
 interface AppContextType {
   jobs: Job[];
-  addJob: (job: Omit<Job, 'id' | 'status' | 'contractor' | 'createdAt'>) => void;
-  acceptJob: (id: number) => void;
   contractors: Contractor[];
+  loading: boolean;
+  addJob: (job: Omit<Job, 'id' | 'status' | 'contractor' | 'createdAt'>) => Promise<void>;
+  acceptJob: (id: number) => Promise<void>;
+  refreshJobs: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addJob = (newJob: Omit<Job, 'id' | 'status' | 'contractor' | 'createdAt'>) => {
-    const job: Job = {
-      ...newJob,
-      id: Date.now(),
-      status: 'open',
-      contractor: null,
-      createdAt: new Date()
-    };
-    setJobs([job, ...jobs]);
+  const refreshJobs = async () => {
+    try {
+      const res = await fetch('/api/jobs');
+      const data = await res.json();
+      setJobs(data);
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error);
+    }
   };
 
-  const acceptJob = (id: number) => {
-    setJobs(jobs.map(j => {
-      if (j.id === id) {
-        // Randomly assign a contractor for demo
-        const randomContractor = contractors[Math.floor(Math.random() * contractors.length)];
-        return { ...j, status: 'accepted', contractor: randomContractor.name };
+  const loadContractors = async () => {
+    try {
+      const res = await fetch('/api/contractors');
+      const data = await res.json();
+      setContractors(data);
+    } catch (error) {
+      console.error('Failed to fetch contractors:', error);
+    }
+  };
+
+  const seedData = async () => {
+    try {
+      await fetch('/api/seed', { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to seed:', error);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await seedData();
+      await Promise.all([refreshJobs(), loadContractors()]);
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  const addJob = async (newJob: Omit<Job, 'id' | 'status' | 'contractor' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newJob.title,
+          description: newJob.description,
+          price: newJob.price,
+          lat: newJob.lat,
+          lng: newJob.lng,
+          status: 'open',
+          contractor: null,
+        }),
+      });
+      if (res.ok) {
+        await refreshJobs();
       }
-      return j;
-    }));
+    } catch (error) {
+      console.error('Failed to create job:', error);
+    }
+  };
+
+  const acceptJob = async (id: number) => {
+    try {
+      // Pick a random contractor
+      const randomContractor = contractors[Math.floor(Math.random() * contractors.length)];
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'accepted',
+          contractor: randomContractor?.name || 'Verified Contractor',
+        }),
+      });
+      if (res.ok) {
+        await refreshJobs();
+      }
+    } catch (error) {
+      console.error('Failed to accept job:', error);
+    }
   };
 
   return (
-    <AppContext.Provider value={{ jobs, addJob, acceptJob, contractors }}>
+    <AppContext.Provider value={{ jobs, contractors, loading, addJob, acceptJob, refreshJobs }}>
       {children}
     </AppContext.Provider>
   );

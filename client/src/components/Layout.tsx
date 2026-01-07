@@ -28,16 +28,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               const Icon = item.icon;
               const isActive = location === item.href;
               return (
-                <Link key={item.href} href={item.href}>
-                  <a className={cn(
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 text-sm font-medium",
                     isActive 
                       ? "bg-primary/10 text-primary border border-primary/20" 
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}>
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </a>
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
                 </Link>
               );
             })}
