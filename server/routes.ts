@@ -8,6 +8,11 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Jobs API
   app.get("/api/jobs", async (req, res) => {
     try {
