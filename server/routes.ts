@@ -1,13 +1,19 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema, insertDroneSurveySchema, insertTreeSensorSchema, insertSensorReadingSchema } from "@shared/schema";
+import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema, insertDroneSurveySchema, insertTreeSensorSchema, insertSensorReadingSchema, insertJobPhotoSchema, insertContractorVerificationSchema, insertAiEstimateSchema } from "@shared/schema";
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { registerChatRoutes } from "./replit_integrations/chat";
 import { broadcastJobUpdate, broadcastToUser } from "./websocket";
 import OpenAI from "openai";
+import multer from "multer";
+import { estimateJob, estimateFromDescription } from "./aiEstimator";
+import { uploadJobPhoto, validateJobDocumentation, getJobPhotosPath } from "./jobDocs";
+import { verifyContractor, getPayoutRate, getAllTierBenefits } from "./contractorVerification";
+
+const upload = multer({ dest: "uploads/" });
 
 export async function registerRoutes(
   httpServer: Server,
@@ -814,6 +820,306 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to seed IoT data" });
     }
   });
+
+  // AI Job Estimation - Photo-based
+  app.post("/api/job-estimate", upload.single("treePhoto"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: "Tree photo is required" });
+      }
+      const description = req.body.description;
+      const result = await estimateJob(req.file.path, description);
+      
+      // Save estimate to database
+      const estimate = await storage.createAiEstimate({
+        jobId: req.body.jobId ? parseInt(req.body.jobId) : undefined,
+        photoUrl: `/uploads/${req.file.filename}`,
+        treeType: result.treeType,
+        estimatedHeight: result.estimatedHeight,
+        estimatedDiameter: result.estimatedDiameter,
+        complexity: result.complexity,
+        priceMin: result.priceMin,
+        priceMax: result.priceMax,
+        confidence: result.confidence,
+        analysis: result.analysis,
+      });
+
+      res.json({ 
+        success: true, 
+        estimate: {
+          ...result,
+          id: estimate.id,
+        }
+      });
+    } catch (error: any) {
+      console.error("Estimation error:", error.message);
+      res.status(500).json({ success: false, error: "Estimation failed" });
+    }
+  });
+
+  // AI Job Estimation - Text-based
+  app.post("/api/job-estimate/text", async (req, res) => {
+    try {
+      const { description, jobId } = req.body;
+      if (!description) {
+        return res.status(400).json({ success: false, error: "Description is required" });
+      }
+      
+      const result = await estimateFromDescription(description);
+      
+      const estimate = await storage.createAiEstimate({
+        jobId: jobId ? parseInt(jobId) : undefined,
+        treeType: result.treeType,
+        estimatedHeight: result.estimatedHeight,
+        estimatedDiameter: result.estimatedDiameter,
+        complexity: result.complexity,
+        priceMin: result.priceMin,
+        priceMax: result.priceMax,
+        confidence: result.confidence,
+        analysis: result.analysis,
+      });
+
+      res.json({ 
+        success: true, 
+        estimate: {
+          ...result,
+          id: estimate.id,
+        }
+      });
+    } catch (error: any) {
+      console.error("Estimation error:", error.message);
+      res.status(500).json({ success: false, error: "Estimation failed" });
+    }
+  });
+
+  // Stripe Payment - Create payment intent with escrow-style split
+  app.post("/api/create-payment", async (req, res) => {
+    try {
+      const { amount, contractorId, jobId } = req.body;
+      
+      if (!amount || typeof amount !== 'number') {
+        return res.status(400).json({ success: false, error: "Amount is required" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const amountCents = Math.round(amount * 100);
+      
+      // Get contractor tier for payout rate
+      let payoutRate = 0.80; // Default bronze rate
+      if (contractorId) {
+        const verification = await storage.getContractorVerification(contractorId);
+        if (verification) {
+          payoutRate = getPayoutRate(verification.tier as any);
+        }
+      }
+      
+      const platformFeeCents = Math.round(amountCents * (1 - payoutRate));
+      const contractorAmountCents = amountCents - platformFeeCents;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountCents,
+        currency: 'usd',
+        payment_method_types: ['card'],
+        metadata: {
+          jobId: jobId?.toString() || '',
+          contractorId: contractorId || '',
+          platformFee: platformFeeCents.toString(),
+          contractorPayout: contractorAmountCents.toString(),
+        }
+      });
+
+      res.json({ 
+        success: true, 
+        clientSecret: paymentIntent.client_secret,
+        platformFee: platformFeeCents / 100,
+        contractorPayout: contractorAmountCents / 100,
+        payoutRate
+      });
+    } catch (error: any) {
+      console.error("Payment error:", error.message);
+      res.status(500).json({ success: false, error: "Payment creation failed" });
+    }
+  });
+
+  // Upload Job Photos (before/after documentation)
+  app.post("/api/upload-photo", upload.single("jobPhoto"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: "Photo is required" });
+      }
+
+      const { jobId, type, latitude, longitude } = req.body;
+      
+      if (!jobId || !type) {
+        return res.status(400).json({ success: false, error: "jobId and type are required" });
+      }
+
+      const validTypes = ["before", "after", "estimate"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ success: false, error: "Type must be 'before', 'after', or 'estimate'" });
+      }
+
+      const location = latitude && longitude 
+        ? { lat: parseFloat(latitude), lng: parseFloat(longitude) }
+        : undefined;
+
+      const result = await uploadJobPhoto(req.file.path, parseInt(jobId), type, location);
+      
+      // Save to database
+      const photo = await storage.createJobPhoto({
+        jobId: parseInt(jobId),
+        type: type as "before" | "after" | "estimate",
+        url: result.url,
+        lat: location?.lat,
+        lng: location?.lng,
+        verified: result.verified,
+      });
+
+      res.json({ 
+        success: true, 
+        photo: {
+          id: photo.id,
+          url: result.url,
+          type: result.type,
+          verified: result.verified,
+          timestamp: result.timestamp,
+        }
+      });
+    } catch (error: any) {
+      console.error("Photo upload error:", error.message);
+      res.status(500).json({ success: false, error: "Photo upload failed" });
+    }
+  });
+
+  // Get job photos
+  app.get("/api/jobs/:id/photos", async (req, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const photos = await storage.getJobPhotos(jobId);
+      const validation = validateJobDocumentation(photos);
+      
+      res.json({
+        photos,
+        documentation: validation,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch job photos" });
+    }
+  });
+
+  // Contractor Verification
+  app.post("/api/verify-contractor", async (req, res) => {
+    try {
+      const { 
+        contractorId,
+        hasInsurance,
+        insuranceExpiry,
+        hasLicense,
+        licenseNumber,
+        licenseExpiry,
+        backgroundCheck,
+        bondAmount,
+        completedJobs
+      } = req.body;
+
+      if (!contractorId) {
+        return res.status(400).json({ success: false, error: "contractorId is required" });
+      }
+
+      const verificationData = {
+        hasInsurance: !!hasInsurance,
+        insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : undefined,
+        hasLicense: !!hasLicense,
+        licenseNumber,
+        licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : undefined,
+        backgroundCheck: !!backgroundCheck,
+        bondAmount: bondAmount ? parseFloat(bondAmount) : undefined,
+        completedJobs: completedJobs ? parseInt(completedJobs) : 0,
+      };
+
+      const result = verifyContractor(verificationData);
+
+      // Save or update verification in database
+      const existing = await storage.getContractorVerification(contractorId);
+      
+      if (existing) {
+        await storage.updateContractorVerification(contractorId, {
+          tier: result.tier,
+          hasInsurance: verificationData.hasInsurance,
+          insuranceExpiry: verificationData.insuranceExpiry,
+          hasLicense: verificationData.hasLicense,
+          licenseNumber: verificationData.licenseNumber,
+          licenseExpiry: verificationData.licenseExpiry,
+          backgroundCheck: verificationData.backgroundCheck,
+          bondAmount: verificationData.bondAmount,
+          completedJobs: verificationData.completedJobs,
+          verifiedAt: result.verified ? new Date() : null,
+        });
+      } else {
+        await storage.createContractorVerification({
+          contractorId,
+          tier: result.tier,
+          hasInsurance: verificationData.hasInsurance,
+          hasLicense: verificationData.hasLicense,
+          licenseNumber: verificationData.licenseNumber,
+          backgroundCheck: verificationData.backgroundCheck,
+          bondAmount: verificationData.bondAmount,
+          completedJobs: verificationData.completedJobs,
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        verified: result.verified,
+        tier: result.tier,
+        score: result.score,
+        requirements: result.requirements,
+        benefits: result.benefits,
+        payoutRate: getPayoutRate(result.tier),
+      });
+    } catch (error: any) {
+      console.error("Verification error:", error.message);
+      res.status(500).json({ success: false, error: "Verification failed" });
+    }
+  });
+
+  // Get contractor verification status
+  app.get("/api/contractors/:id/verification", async (req, res) => {
+    try {
+      const verification = await storage.getContractorVerification(req.params.id);
+      if (!verification) {
+        return res.json({ 
+          verified: false, 
+          tier: "bronze",
+          benefits: getAllTierBenefits().bronze,
+          payoutRate: 0.80,
+        });
+      }
+      
+      res.json({
+        ...verification,
+        payoutRate: getPayoutRate(verification.tier as any),
+        benefits: getAllTierBenefits()[verification.tier as keyof ReturnType<typeof getAllTierBenefits>],
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch verification" });
+    }
+  });
+
+  // Get tier benefits overview
+  app.get("/api/contractor-tiers", (req, res) => {
+    res.json({
+      tiers: getAllTierBenefits(),
+      payoutRates: {
+        bronze: 0.80,
+        silver: 0.85,
+        gold: 0.90,
+      }
+    });
+  });
+
+  // Serve uploaded files
+  app.use("/uploads", express.static("uploads"));
 
   return httpServer;
 }

@@ -263,3 +263,92 @@ export const insertSensorReadingSchema = createInsertSchema(sensorReadings, {
 
 export type InsertSensorReading = InferInsertModel<typeof sensorReadings>;
 export type SensorReading = InferSelectModel<typeof sensorReadings>;
+
+// Job Photos table for before/after documentation
+export const jobPhotos = pgTable("job_photos", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull(),
+  type: text("type").notNull(), // 'before', 'after', 'estimate'
+  url: text("url").notNull(),
+  lat: real("lat"),
+  lng: real("lng"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  verified: boolean("verified").notNull().default(false),
+});
+
+export const insertJobPhotoSchema = createInsertSchema(jobPhotos, {
+  jobId: z.number(),
+  type: z.enum(["before", "after", "estimate"]),
+  url: z.string(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  verified: z.boolean().optional(),
+});
+
+export type InsertJobPhoto = InferInsertModel<typeof jobPhotos>;
+export type JobPhoto = InferSelectModel<typeof jobPhotos>;
+
+// Contractor Verification table for tier system
+export const contractorVerifications = pgTable("contractor_verifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  contractorId: varchar("contractor_id").notNull(),
+  tier: text("tier").notNull().default("bronze"), // 'bronze', 'silver', 'gold'
+  hasInsurance: boolean("has_insurance").notNull().default(false),
+  insuranceExpiry: timestamp("insurance_expiry"),
+  hasLicense: boolean("has_license").notNull().default(false),
+  licenseNumber: text("license_number"),
+  licenseExpiry: timestamp("license_expiry"),
+  backgroundCheck: boolean("background_check").notNull().default(false),
+  bondAmount: real("bond_amount"),
+  completedJobs: integer("completed_jobs").notNull().default(0),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertContractorVerificationSchema = createInsertSchema(contractorVerifications, {
+  contractorId: z.string(),
+  tier: z.enum(["bronze", "silver", "gold"]).optional(),
+  hasInsurance: z.boolean().optional(),
+  insuranceExpiry: z.date().optional(),
+  hasLicense: z.boolean().optional(),
+  licenseNumber: z.string().optional(),
+  licenseExpiry: z.date().optional(),
+  backgroundCheck: z.boolean().optional(),
+  bondAmount: z.number().optional(),
+  completedJobs: z.number().optional(),
+});
+
+export type InsertContractorVerification = InferInsertModel<typeof contractorVerifications>;
+export type ContractorVerification = InferSelectModel<typeof contractorVerifications>;
+
+// AI Estimates table for photo-based pricing
+export const aiEstimates = pgTable("ai_estimates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id"),
+  photoUrl: text("photo_url"),
+  treeType: text("tree_type"),
+  estimatedHeight: real("estimated_height"),
+  estimatedDiameter: real("estimated_diameter"),
+  complexity: text("complexity"), // 'simple', 'moderate', 'complex', 'hazardous'
+  priceMin: real("price_min"),
+  priceMax: real("price_max"),
+  confidence: real("confidence"),
+  analysis: text("analysis"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertAiEstimateSchema = createInsertSchema(aiEstimates, {
+  jobId: z.number().optional(),
+  photoUrl: z.string().optional(),
+  treeType: z.string().optional(),
+  estimatedHeight: z.number().optional(),
+  estimatedDiameter: z.number().optional(),
+  complexity: z.enum(["simple", "moderate", "complex", "hazardous"]).optional(),
+  priceMin: z.number().optional(),
+  priceMax: z.number().optional(),
+  confidence: z.number().optional(),
+  analysis: z.string().optional(),
+});
+
+export type InsertAiEstimate = InferInsertModel<typeof aiEstimates>;
+export type AiEstimate = InferSelectModel<typeof aiEstimates>;

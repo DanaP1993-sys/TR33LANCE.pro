@@ -1,0 +1,192 @@
+tree-lance-frontend/
+├── src/
+│   ├── App.js
+│   ├── components/
+│   │   ├── JobForm.js
+│   │   ├── ContractorForm.js
+│   │   ├── PaymentForm.js
+│   │   └── PhotoUpload.js
+│   └── index.js
+├── package.json
+└── public/{
+  "name": "tree-lance-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start"
+  }
+} import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />); import React from "react";
+import JobForm from "./components/JobForm";
+import ContractorForm from "./components/ContractorForm";
+import PaymentForm from "./components/PaymentForm";
+import PhotoUpload from "./components/PhotoUpload";
+
+function App() {
+  return (
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <h1>Tree-Lance Platform</h1>
+      <JobForm />
+      <hr />
+      <PhotoUpload />
+      <hr />
+      <PaymentForm />
+      <hr />
+      <ContractorForm />
+    </div>
+  );
+}
+
+export default App; import React, { useState } from "react";
+import axios from "axios";
+
+function JobForm() {
+  const [photo, setPhoto] = useState(null);
+  const [estimate, setEstimate] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!photo) return alert("Upload a photo first!");
+    const formData = new FormData();
+    formData.append("treePhoto", photo);
+
+    const res = await axios.post("http://localhost:5000/api/job-estimate", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    setEstimate(res.data.estimate);
+  };
+
+  return (
+    <div>
+      <h2>AI Job Estimate</h2>
+      <form onSubmit={handleSubmit}>
+        <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])} />
+        <button type="submit">Get Estimate</button>
+      </form>
+      {estimate && (
+        <div>
+          <p>Price: ${estimate.price}</p>
+          <p>Duration: {estimate.duration}</p>
+          <p>Risk Level: {estimate.riskLevel}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default JobForm; import React, { useState } from "react";
+import axios from "axios";
+
+function PhotoUpload() {
+  const [photo, setPhoto] = useState(null);
+  const [url, setUrl] = useState("");
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!photo) return alert("Upload a photo first!");
+    const formData = new FormData();
+    formData.append("jobPhoto", photo);
+    formData.append("jobId", "JOB123");
+    formData.append("type", "before");
+    formData.append("latitude", "29.7604");
+    formData.append("longitude", "-95.3698");
+
+    const res = await axios.post("http://localhost:5000/api/upload-photo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    setUrl(res.data.url);
+  };
+
+  return (
+    <div>
+      <h2>Upload Job Photo</h2>
+      <form onSubmit={handleUpload}>
+        <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])} />
+        <button type="submit">Upload Photo</button>
+      </form>
+      {url && (
+        <div>
+          <p>Photo Uploaded: <a href={url} target="_blank">{url}</a></p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default PhotoUpload; import React, { useState } from "react";
+import axios from "axios";
+
+function PaymentForm() {
+  const [amount, setAmount] = useState("");
+  const [contractorId, setContractorId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+
+  const handlePayment = async (e) => {
+    e.preventDefault();
+    const res = await axios.post("http://localhost:5000/api/create-payment", { amount, contractorId });
+    setClientSecret(res.data.clientSecret);
+  };
+
+  return (
+    <div>
+      <h2>Create Payment</h2>
+      <form onSubmit={handlePayment}>
+        <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input type="text" placeholder="Contractor Stripe ID" value={contractorId} onChange={(e) => setContractorId(e.target.value)} />
+        <button type="submit">Create Payment</button>
+      </form>
+      {clientSecret && <p>Client Secret: {clientSecret}</p>}
+    </div>
+  );
+}
+
+export default PaymentForm; import React, { useState } from "react";
+import axios from "axios";
+
+function ContractorForm() {
+  const [contractor, setContractor] = useState({ license: "", licenseValid: false, insurance: "", insuranceActive: false, bond: "", bondActive: false });
+  const [verified, setVerified] = useState(null);
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    const res = await axios.post("http://localhost:5000/api/verify-contractor", contractor);
+    setVerified(res.data.verified);
+  };
+
+  return (
+    <div>
+      <h2>Contractor Verification</h2>
+      <form onSubmit={handleVerify}>
+        <input placeholder="License" onChange={(e) => setContractor({ ...contractor, license: e.target.value })} />
+        <label>
+          Valid License
+          <input type="checkbox" onChange={(e) => setContractor({ ...contractor, licenseValid: e.target.checked })} />
+        </label>
+        <input placeholder="Insurance" onChange={(e) => setContractor({ ...contractor, insurance: e.target.value })} />
+        <label>
+          Insurance Active
+          <input type="checkbox" onChange={(e) => setContractor({ ...contractor, insuranceActive: e.target.checked })} />
+        </label>
+        <input placeholder="Bond" onChange={(e) => setContractor({ ...contractor, bond: e.target.value })} />
+        <label>
+          Bond Active
+          <input type="checkbox" onChange={(e) => setContractor({ ...contractor, bondActive: e.target.checked })} />
+        </label>
+        <button type="submit">Verify Contractor</button>
+      </form>
+      {verified !== null && <p>Contractor Verified: {verified.toString()}</p>}
+    </div>
+  );
+}
+
+export default ContractorForm; npm install npm start

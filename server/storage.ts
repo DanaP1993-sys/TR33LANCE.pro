@@ -8,8 +8,11 @@ import {
   type DroneSurvey, type InsertDroneSurvey,
   type TreeSensor, type InsertTreeSensor,
   type SensorReading, type InsertSensorReading,
+  type JobPhoto, type InsertJobPhoto,
+  type ContractorVerification, type InsertContractorVerification,
+  type AiEstimate, type InsertAiEstimate,
   users, jobs, contractors, disputes, notifications, directMessages,
-  droneSurveys, treeSensors, sensorReadings
+  droneSurveys, treeSensors, sensorReadings, jobPhotos, contractorVerifications, aiEstimates
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -66,6 +69,20 @@ export interface IStorage {
   // Sensor Readings
   getSensorReadings(sensorId: number): Promise<SensorReading[]>;
   createSensorReading(reading: InsertSensorReading): Promise<SensorReading>;
+  
+  // Job Photos
+  getJobPhotos(jobId: number): Promise<JobPhoto[]>;
+  createJobPhoto(photo: InsertJobPhoto): Promise<JobPhoto>;
+  deleteJobPhoto(id: number): Promise<boolean>;
+  
+  // Contractor Verifications
+  getContractorVerification(contractorId: string): Promise<ContractorVerification | undefined>;
+  createContractorVerification(verification: InsertContractorVerification): Promise<ContractorVerification>;
+  updateContractorVerification(contractorId: string, updates: Partial<ContractorVerification>): Promise<ContractorVerification | undefined>;
+  
+  // AI Estimates
+  getAiEstimates(jobId: number): Promise<AiEstimate[]>;
+  createAiEstimate(estimate: InsertAiEstimate): Promise<AiEstimate>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -319,6 +336,55 @@ export class DatabaseStorage implements IStorage {
   async createSensorReading(reading: InsertSensorReading): Promise<SensorReading> {
     const [newReading] = await db.insert(sensorReadings).values(reading).returning();
     return newReading;
+  }
+
+  // Job Photos
+  async getJobPhotos(jobId: number): Promise<JobPhoto[]> {
+    return db.select().from(jobPhotos)
+      .where(eq(jobPhotos.jobId, jobId))
+      .orderBy(desc(jobPhotos.timestamp));
+  }
+
+  async createJobPhoto(photo: InsertJobPhoto): Promise<JobPhoto> {
+    const [newPhoto] = await db.insert(jobPhotos).values(photo).returning();
+    return newPhoto;
+  }
+
+  async deleteJobPhoto(id: number): Promise<boolean> {
+    const result = await db.delete(jobPhotos).where(eq(jobPhotos.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Contractor Verifications
+  async getContractorVerification(contractorId: string): Promise<ContractorVerification | undefined> {
+    const [verification] = await db.select().from(contractorVerifications)
+      .where(eq(contractorVerifications.contractorId, contractorId));
+    return verification;
+  }
+
+  async createContractorVerification(verification: InsertContractorVerification): Promise<ContractorVerification> {
+    const [newVerification] = await db.insert(contractorVerifications).values(verification).returning();
+    return newVerification;
+  }
+
+  async updateContractorVerification(contractorId: string, updates: Partial<ContractorVerification>): Promise<ContractorVerification | undefined> {
+    const [updated] = await db.update(contractorVerifications)
+      .set(updates)
+      .where(eq(contractorVerifications.contractorId, contractorId))
+      .returning();
+    return updated;
+  }
+
+  // AI Estimates
+  async getAiEstimates(jobId: number): Promise<AiEstimate[]> {
+    return db.select().from(aiEstimates)
+      .where(eq(aiEstimates.jobId, jobId))
+      .orderBy(desc(aiEstimates.createdAt));
+  }
+
+  async createAiEstimate(estimate: InsertAiEstimate): Promise<AiEstimate> {
+    const [newEstimate] = await db.insert(aiEstimates).values(estimate).returning();
+    return newEstimate;
   }
 }
 
