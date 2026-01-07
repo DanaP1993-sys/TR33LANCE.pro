@@ -108,6 +108,47 @@ export async function registerRoutes(
     }
   });
 
+  // Get nearby contractors within radius (default 10km)
+  app.get("/api/contractors/nearby", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      const radius = parseFloat(req.query.radius as string) || 10;
+
+      if (isNaN(lat) || isNaN(lng)) {
+        return res.status(400).json({ error: "lat and lng query params required" });
+      }
+
+      const contractors = await storage.getContractors();
+      
+      // Haversine formula for distance calculation
+      const toRad = (deg: number) => deg * Math.PI / 180;
+      const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 6371; // Earth's radius in km
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      };
+
+      const nearby = contractors
+        .filter(c => c.lat && c.lng)
+        .map(c => ({
+          ...c,
+          distance: getDistance(lat, lng, c.lat!, c.lng!)
+        }))
+        .filter(c => c.distance <= radius)
+        .sort((a, b) => a.distance - b.distance);
+
+      res.json(nearby);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch nearby contractors" });
+    }
+  });
+
   app.post("/api/contractors", async (req, res) => {
     try {
       const parsed = insertContractorSchema.safeParse(req.body);
