@@ -106,6 +106,37 @@ Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 - Full AR collaboration between all parties
 - Gamification with badges and leaderboards
 
+## Vision 2030 Master Feature Map
+
+### User Layer
+- Contractor AR Glasses with holographic overlays, voice/gesture commands
+- Homeowner App with live video feed, AR previews, environmental metrics
+
+### AI & Intelligence Layer
+- Computer vision for tree species, disease, pest detection
+- Predictive analytics for risk scoring and maintenance schedules
+- Natural language AI for voice commands and instructions
+- AI Safety Assistant for hazard and fatigue detection
+
+### IoT & Sensing Layer
+- Tree sensors (soil moisture, structural health, leaf health)
+- Wearable sensors (contractor fatigue, heart rate, exposure alerts)
+- Drone mapping with autonomous aerial surveys and 3D mapping
+
+### Collaboration Layer
+- Live AR collaboration with remote expert annotations
+- Real-time AI suggestions and hazard highlighting
+
+### Compliance & Safety Layer
+- Automated license and insurance verification
+- AI compliance checks against local regulations
+- Safety alerts from wearables and environmental sensors
+
+### Sustainability & Analytics Layer
+- Carbon sequestration and growth tracking
+- Before/after comparisons with AI insights
+- Ecosystem health monitoring
+
 ## Recent Changes
 - 2026-01-07: Added Direct Messaging feature (user-to-user chat with job context)
 - 2026-01-07: Added Messages page to frontend navigation
