@@ -1,0 +1,100 @@
+Understood. Below is a clear, execution-ready roadmap—no fluff, no theory—focused on making Tree-Lance stronger, safer, and more valuable fast.
+
+⸻
+
+Top 5 Features to Build First (Highest ROI)
+
+These directly drive adoption, revenue, and trust.
+	1.	AI Photo-Based Estimates
+Homeowners upload photos → AI generates price range + scope.
+Impact: Higher conversion, fewer abandoned jobs.
+	2.	Escrow-Style Payments via Stripe
+Funds authorized upfront, released at completion milestones.
+Impact: Reduces disputes, protects both sides, increases confidence.
+	3.	Verified Contractor Tiers (Bronze / Silver / Gold)
+Ranking based on insurance, history, safety, and reviews.
+Impact: Self-policing quality without employment risk.
+	4.	Mandatory Job Documentation (Before / After)
+Geotagged, timestamped photo requirements.
+Impact: Legal protection, fewer chargebacks, stronger trust.
+	5.	Emergency / Storm Mode
+Priority matching, surge logic, disaster tagging.
+Impact: Massive revenue spikes when demand explodes.
+
+⸻
+
+12-Month Build Roadmap
+
+Phase 1: Foundation (Months 0–3)
+
+Goal: Make the marketplace solid and trustworthy.
+	•	Core job posting + contractor matching
+	•	Stripe payments with 20% auto-split
+	•	Contractor verification (insurance, license upload)
+	•	Ratings & reviews
+	•	Basic GPS mapping
+
+This is your minimum investor-credible product.
+
+⸻
+
+Phase 2: Conversion & Control (Months 4–6)
+
+Goal: Increase bookings and reduce friction.
+	•	AI photo estimates (price range, risk flags)
+	•	Escrow-style payment flow
+	•	Required before/after documentation
+	•	Contractor tier system
+	•	In-app messaging with job timeline
+
+This is where Tree-Lance becomes reliable, not just usable.
+
+⸻
+
+Phase 3: Differentiation (Months 7–9)
+
+Goal: Separate from competitors.
+	•	Emergency / Storm Mode
+	•	Risk & safety scoring
+	•	Route optimization for contractors
+	•	Homeowner job tracking dashboard
+
+Now you’re building preference, not just awareness.
+
+⸻
+
+Phase 4: Moat Building (Months 10–12)
+
+Goal: Long-term defensibility.
+	•	Tree history “system of record”
+	•	Maintenance subscriptions
+	•	Insurance-ready documentation exports
+	•	Municipal / HOA pilot dashboards
+
+This is where Tree-Lance stops being an app and starts being infrastructure.
+
+⸻
+
+Hard Truth (Important)
+
+Tree-Lance does not win by being futuristic first.
+It wins by being boringly reliable, then quietly powerful.
+
+AI, AR, drones, smart glasses—those matter after:
+	•	Payments are frictionless
+	•	Trust is enforceable
+	•	Jobs close cleanly
+
+You’re thinking at the right scale. The discipline is sequencing.
+
+⸻
+
+Next Logical Moves (Pick One)
+
+I can:
+	1.	Turn this into a 1-page investor roadmap
+	2.	Create a pitch-deck slide explaining this strategy
+	3.	Reduce this to a “what we’re building now vs later” statement
+	4.	Translate this into engineering tickets / feature specs
+
+Tell me which direction you want to go.
