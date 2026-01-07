@@ -99,6 +99,38 @@ export async function registerRoutes(
     }
   });
 
+  // Update job status (any valid status)
+  app.patch("/api/jobs/:id/status", requireAuth(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      const validStatuses = ["requested", "accepted", "in_progress", "completed", "cancelled"];
+      
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const job = await storage.updateJob(id, { status });
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update job status" });
+    }
+  });
+
+  // Get active jobs (not completed/cancelled)
+  app.get("/api/jobs/active", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      const active = jobs.filter(j => !["completed", "cancelled"].includes(j.status));
+      res.json(active);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active jobs" });
+    }
+  });
+
   // Contractors API
   app.get("/api/contractors", async (req, res) => {
     try {
@@ -243,6 +275,52 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error('Stripe checkout error:', error.message);
       res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Smart Dispatch API - finds best contractor by distance + rating
+  app.post("/api/dispatch", async (req, res) => {
+    try {
+      const { lat, lng, radius = 10 } = req.body;
+
+      if (!lat || !lng) {
+        return res.status(400).json({ error: "lat and lng required" });
+      }
+
+      const contractors = await storage.getContractors();
+      
+      const toRad = (deg: number) => deg * Math.PI / 180;
+      const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      };
+
+      const nearby = contractors
+        .filter(c => c.lat && c.lng)
+        .map(c => ({
+          ...c,
+          distance: getDistance(lat, lng, c.lat!, c.lng!),
+          score: (c.rating / 5) * 0.4 + (1 - Math.min(getDistance(lat, lng, c.lat!, c.lng!) / radius, 1)) * 0.6
+        }))
+        .filter(c => c.distance <= radius)
+        .sort((a, b) => b.score - a.score);
+
+      if (nearby.length === 0) {
+        return res.json({ contractor: null, message: "No contractors available in area" });
+      }
+
+      res.json({ 
+        contractor: nearby[0],
+        alternatives: nearby.slice(1, 4)
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to dispatch" });
     }
   });
 
