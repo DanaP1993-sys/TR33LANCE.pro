@@ -2,8 +2,10 @@ import { Job, useApp } from '@/lib/context';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapPin, DollarSign, Clock, CheckCircle, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import paypalQr from '@assets/IMG_7307_1767779744891.jpeg';
 
 export default function JobCard({ job }: { job: Job }) {
   const { acceptJob } = useApp();
@@ -45,15 +47,41 @@ export default function JobCard({ job }: { job: Job }) {
         </div>
 
         {job.status !== 'open' && (
-          <div className="mt-3 p-2 bg-muted/30 rounded text-xs space-y-1 font-mono">
-            <div className="flex justify-between">
-              <span>Contractor Payout:</span>
-              <span className="text-foreground">${payout}</span>
+          <div className="mt-3 space-y-2">
+            <div className="p-2 bg-muted/30 rounded text-xs space-y-1 font-mono">
+              <div className="flex justify-between">
+                <span>Contractor Payout:</span>
+                <span className="text-foreground">${payout}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Platform Fee (20%):</span>
+                <span>${platformFee}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>Platform Fee (20%):</span>
-              <span>${platformFee}</span>
-            </div>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full gap-2 text-[10px] h-8 uppercase tracking-wider font-mono">
+                  <QrCode className="w-3 h-3" />
+                  PayPal QR
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px] bg-background border-border">
+                <DialogHeader>
+                  <DialogTitle className="text-center font-display uppercase tracking-widest text-primary">Scan. Pay. Go.</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center p-4 space-y-4">
+                  <div className="rounded-2xl overflow-hidden border-4 border-white bg-white shadow-xl">
+                    <img 
+                      src={paypalQr} 
+                      alt="PayPal QR Code" 
+                      className="w-full h-auto max-w-[250px]"
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground font-mono uppercase tracking-tighter">Branch Out Bro's Payment Gateway</p>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </CardContent>
@@ -72,3 +100,4 @@ export default function JobCard({ job }: { job: Job }) {
     </Card>
   );
 }
+
