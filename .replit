@@ -51,3 +51,6 @@ integrations = ["stripe:2.0.0", "javascript_openai_ai_integrations:2.0.0"]
 
 [rules.formatter.fileExtensions.".ts"]
 id = "module:web/languageServer:typescript-language-server"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-a00cdaf7-af16-45ef-821e-83f0c2c36e04"
