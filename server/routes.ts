@@ -75,6 +75,29 @@ export async function registerRoutes(
     }
   });
 
+  // Payout calculation
+  app.post("/api/payout", async (req, res) => {
+    try {
+      const { jobId, price } = req.body;
+      
+      if (!price || typeof price !== 'number') {
+        return res.status(400).json({ error: "Price is required" });
+      }
+
+      const platformFee = Math.round(price * 0.2 * 100) / 100;
+      const contractorPayout = Math.round(price * 0.8 * 100) / 100;
+
+      res.json({
+        jobId,
+        total: price,
+        platformFee,
+        contractorPayout
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to calculate payout" });
+    }
+  });
+
   // Seed contractors if none exist
   app.post("/api/seed", async (req, res) => {
     try {
