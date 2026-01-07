@@ -1,0 +1,157 @@
+tree-lance-future/
+├── backend/
+│   ├── server.js
+│   ├── aiEstimator.js
+│   ├── stripePayment.js
+│   ├── jobDocs.js
+│   ├── contractorVerification.js
+│   ├── selfLearning.js
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── index.js
+│   │   ├── components/
+│   │   │   ├── JobForm.js
+│   │   │   ├── PhotoUpload.js
+│   │   │   ├── PaymentForm.js
+│   │   │   └── ContractorForm.js
+│   │   │   └── AROverlay.js
+│   └── package.json
+└── uploads/{
+  "name": "tree-lance-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5",
+    "stripe": "^12.0.0",
+    "firebase-admin": "^11.10.0",
+    "openai": "^5.0.0"
+  }
+} {
+  "name": "tree-lance-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.5.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "three": "^0.162.0"  // For AR overlays
+  },
+  "scripts": { "start": "react-scripts start" }
+} import OpenAI from "openai";
+import { logJobOutcome } from "./selfLearning.js";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function aiJobEstimate(photoPath, jobDetails) {
+  const prompt = `
+Analyze this tree service job.
+Photo: ${photoPath}
+Details: ${JSON.stringify(jobDetails)}
+Output: price, duration, risk level, recommended tools.
+`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-5-mini",
+    messages: [{ role: "user", content: prompt }]
+  });
+
+  const estimate = JSON.parse(response.choices[0].message.content);
+  return estimate;
+}
+
+import fs from "fs";
+
+export async function logJobOutcome(jobId, outcome) {
+  const log = { jobId, ...outcome, timestamp: Date.now() };
+  fs.appendFileSync("jobOutcomes.json", JSON.stringify(log) + "\n");
+}
+
+export async function retrainModel() {
+  const outcomes = fs.readFileSync("jobOutcomes.json", "utf8")
+    .split("\n").filter(Boolean);
+  console.log("Retraining AI with", outcomes.length, "jobs");
+  // Here, send to fine-tuning pipeline or update ML model
+}
+
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_KEY);
+
+export async function createPaymentIntent(amount, contractorId) {
+  const serviceFee = Math.floor(amount * 0.2);
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: amount * 100,
+    currency: "usd",
+    payment_method_types: ["card"],
+    application_fee_amount: serviceFee * 100,
+    transfer_data: { destination: contractorId }
+  });
+  return paymentIntent.client_secret;
+}
+
+import admin from "firebase-admin";
+import fs from "fs";
+
+admin.initializeApp({
+  credential: admin.credential.cert("./firebaseKey.json"),
+  storageBucket: "tree-lance.appspot.com"
+});
+
+const bucket = admin.storage().bucket();
+
+export async function uploadJobPhoto(filePath, jobId, type, location) {
+  const timestamp = Date.now();
+  const fileName = `jobs/${jobId}/${type}_${timestamp}.jpg`;
+  await bucket.upload(filePath, { destination: fileName, metadata: { metadata: { jobId, type, timestamp, ...location } } });
+  fs.unlinkSync(filePath);
+  return `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+}
+
+export function verifyContractor(contractor) {
+  return contractor.license && contractor.licenseValid &&
+         contractor.insurance && contractor.insuranceActive &&
+         contractor.bond && contractor.bondActive;
+}
+
+import React, { useEffect, useRef } from "react";
+import * as THREE from "three";
+
+function AROverlay({ jobData }) {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ alpha: true });
+    renderer.setSize(400, 300);
+    mountRef.current.appendChild(renderer.domElement);
+
+    // Example: show safe zones
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    camera.position.z = 5;
+    function animate() {
+      requestAnimationFrame(animate);
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    return () => mountRef.current.removeChild(renderer.domElement);
+  }, [jobData]);
+
+  return <div ref={mountRef}></div>;
+}
+
+export default AROverlay;
+
+export async function logJobResult(jobId, outcome) {
+  await logJobOutcome(jobId, outcome);
+}

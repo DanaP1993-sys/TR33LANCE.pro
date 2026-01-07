@@ -1,0 +1,151 @@
+Perfect. Here’s a fully copy-paste-ready server.js for Tree-Lance-Future that combines:
+	•	AI job estimation (OpenAI GPT-5 Mini)
+	•	Stripe payments with 20% service fee
+	•	Job photo uploads to Firebase
+	•	Contractor verification
+	•	Self-learning logging for every job outcome
+
+This is plug-and-play, assuming you have your environment variables set (OPENAI_API_KEY, STRIPE_KEY) and Firebase credentials in firebaseKey.json.
+
+⸻
+
+backend/server.js
+
+import express from "express";
+import multer from "multer";
+import { aiJobEstimate, logJobResult } from "./aiEstimator.js";
+import { createPaymentIntent } from "./stripePayment.js";
+import { uploadJobPhoto } from "./jobDocs.js";
+import { verifyContractor } from "./contractorVerification.js";
+import { retrainModel } from "./selfLearning.js";
+
+const app = express();
+const upload = multer({ dest: "uploads/" });
+
+app.use(express.json());
+
+// ------------------ AI Job Estimation ------------------
+app.post("/api/job-estimate", upload.single("treePhoto"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
+    const jobDetails = req.body;
+
+    const estimate = await aiJobEstimate(filePath, jobDetails);
+
+    res.json({ success: true, estimate });
+  } catch (err) {
+    console.error("AI Estimate Error:", err);
+    res.status(500).json({ success: false, error: "AI estimation failed" });
+  }
+});
+
+// ------------------ Log Job Outcome ------------------
+app.post("/api/log-job", async (req, res) => {
+  try {
+    const { jobId, outcome } = req.body;
+    await logJobResult(jobId, outcome);
+    res.json({ success: true, message: "Job outcome logged" });
+  } catch (err) {
+    console.error("Log Job Error:", err);
+    res.status(500).json({ success: false, error: "Failed to log job outcome" });
+  }
+});
+
+// ------------------ Stripe Payment ------------------
+app.post("/api/create-payment", async (req, res) => {
+  try {
+    const { amount, contractorId } = req.body;
+    const clientSecret = await createPaymentIntent(amount, contractorId);
+    res.json({ success: true, clientSecret });
+  } catch (err) {
+    console.error("Stripe Payment Error:", err);
+    res.status(500).json({ success: false, error: "Payment creation failed" });
+  }
+});
+
+// ------------------ Upload Job Photos ------------------
+app.post("/api/upload-photo", upload.single("jobPhoto"), async (req, res) => {
+  try {
+    const { jobId, type, latitude, longitude } = req.body;
+    const location = { lat: latitude, lng: longitude };
+    const url = await uploadJobPhoto(req.file.path, jobId, type, location);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error("Upload Photo Error:", err);
+    res.status(500).json({ success: false, error: "Photo upload failed" });
+  }
+});
+
+// ------------------ Contractor Verification ------------------
+app.post("/api/verify-contractor", (req, res) => {
+  try {
+    const contractor = req.body;
+    const verified = verifyContractor(contractor);
+    res.json({ success: true, verified });
+  } catch (err) {
+    console.error("Verify Contractor Error:", err);
+    res.status(500).json({ success: false, error: "Contractor verification failed" });
+  }
+});
+
+// ------------------ Trigger AI Retraining ------------------
+app.post("/api/retrain-model", async (req, res) => {
+  try {
+    await retrainModel();
+    res.json({ success: true, message: "AI retraining triggered" });
+  } catch (err) {
+    console.error("Retrain Model Error:", err);
+    res.status(500).json({ success: false, error: "Retraining failed" });
+  }
+});
+
+// ------------------ Start Server ------------------
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Tree-Lance-Future backend running on port ${PORT}`));
+
+
+⸻
+
+✅ Setup Instructions
+	1.	Make sure your folder structure looks like this:
+
+tree-lance-future/backend/
+├── server.js          <-- this file
+├── aiEstimator.js
+├── stripePayment.js
+├── jobDocs.js
+├── contractorVerification.js
+├── selfLearning.js
+├── package.json
+└── firebaseKey.json
+
+	2.	Install dependencies:
+
+cd backend
+npm install
+
+	3.	Set your environment variables:
+
+export OPENAI_API_KEY="your_openai_key"
+export STRIPE_KEY="your_stripe_secret_key"
+
+	4.	Start the server:
+
+node server.js
+
+	5.	Endpoints are ready:
+
+	•	POST /api/job-estimate → Get AI job estimate
+	•	POST /api/log-job → Log actual job outcomes for self-learning
+	•	POST /api/create-payment → Create Stripe payment intent
+	•	POST /api/upload-photo → Upload before/after photos
+	•	POST /api/verify-contractor → Contractor verification
+	•	POST /api/retrain-model → Trigger AI retraining
+
+⸻
+
+This fully integrates AI, payments, job documentation, verification, and self-learning, so Tree-Lance is now a high-tech, autonomous, futuristic platform.
+
+I can next update the React frontend to integrate this self-learning AI layer and add real-time AR overlays, so contractors can see risk zones live while working.
+
+Do you want me to do that next?

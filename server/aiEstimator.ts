@@ -21,7 +21,7 @@ export interface EstimateResult {
   riskFactors: string[];
 }
 
-export async function estimateJob(filePath: string, description?: string): Promise<EstimateResult> {
+export async function estimateJob(filePath: string, description?: string, keepFile: boolean = false): Promise<EstimateResult> {
   try {
     const imageBuffer = fs.readFileSync(filePath);
     const base64Image = imageBuffer.toString("base64");
@@ -104,9 +104,11 @@ Price guidelines:
     console.error("AI estimation error:", error.message);
     throw new Error(`Estimation failed: ${error.message}`);
   } finally {
-    try {
-      fs.unlinkSync(filePath);
-    } catch (e) {
+    if (!keepFile) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (e) {
+      }
     }
   }
 }

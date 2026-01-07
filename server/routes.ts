@@ -9,11 +9,25 @@ import { registerChatRoutes } from "./replit_integrations/chat";
 import { broadcastJobUpdate, broadcastToUser } from "./websocket";
 import OpenAI from "openai";
 import multer from "multer";
+import path from "path";
 import { estimateJob, estimateFromDescription } from "./aiEstimator";
 import { uploadJobPhoto, validateJobDocumentation, getJobPhotosPath } from "./jobDocs";
 import { verifyContractor, getPayoutRate, getAllTierBenefits } from "./contractorVerification";
 
-const upload = multer({ dest: "uploads/" });
+const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+const upload = multer({ 
+  dest: "uploads/",
+  limits: { fileSize: maxFileSize },
+  fileFilter: (req, file, cb) => {
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed."));
+    }
+  }
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -828,12 +842,23 @@ export async function registerRoutes(
         return res.status(400).json({ success: false, error: "Tree photo is required" });
       }
       const description = req.body.description;
-      const result = await estimateJob(req.file.path, description);
+      
+      // Keep file for storage, analyze first
+      const result = await estimateJob(req.file.path, description, true);
+      
+      // Move file to permanent location with proper name
+      const fs = require("fs");
+      const timestamp = Date.now();
+      const ext = path.extname(req.file.originalname) || ".jpg";
+      const newFilename = `estimate_${timestamp}${ext}`;
+      const newPath = path.join("uploads", newFilename);
+      fs.renameSync(req.file.path, newPath);
+      const photoUrl = `/uploads/${newFilename}`;
       
       // Save estimate to database
       const estimate = await storage.createAiEstimate({
         jobId: req.body.jobId ? parseInt(req.body.jobId) : undefined,
-        photoUrl: `/uploads/${req.file.filename}`,
+        photoUrl,
         treeType: result.treeType,
         estimatedHeight: result.estimatedHeight,
         estimatedDiameter: result.estimatedDiameter,
@@ -849,6 +874,7 @@ export async function registerRoutes(
         estimate: {
           ...result,
           id: estimate.id,
+          photoUrl,
         }
       });
     } catch (error: any) {
@@ -941,8 +967,8 @@ export async function registerRoutes(
     }
   });
 
-  // Upload Job Photos (before/after documentation)
-  app.post("/api/upload-photo", upload.single("jobPhoto"), async (req, res) => {
+  // Upload Job Photos (before/after documentation) - requires auth
+  app.post("/api/upload-photo", requireAuth(), upload.single("jobPhoto"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ success: false, error: "Photo is required" });
