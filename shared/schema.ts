@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, real, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -38,13 +39,19 @@ export const jobs = pgTable("jobs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertJobSchema = createInsertSchema(jobs).omit({
-  id: true,
-  createdAt: true,
+export const insertJobSchema = createInsertSchema(jobs, {
+  homeownerId: z.string(),
+  description: z.string(),
+  title: z.string().optional(),
+  contractorId: z.string().optional(),
+  price: z.number().optional(),
+  status: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 });
 
-export type InsertJob = z.infer<typeof insertJobSchema>;
-export type Job = typeof jobs.$inferSelect;
+export type InsertJob = InferInsertModel<typeof jobs>;
+export type Job = InferSelectModel<typeof jobs>;
 
 // Contractors table
 export const contractors = pgTable("contractors", {
@@ -56,12 +63,16 @@ export const contractors = pgTable("contractors", {
   stripeId: text("stripe_id").notNull(),
 });
 
-export const insertContractorSchema = createInsertSchema(contractors).omit({
-  id: true,
+export const insertContractorSchema = createInsertSchema(contractors, {
+  name: z.string(),
+  rating: z.number().optional(),
+  lat: z.number(),
+  lng: z.number(),
+  stripeId: z.string(),
 });
 
-export type InsertContractor = z.infer<typeof insertContractorSchema>;
-export type Contractor = typeof contractors.$inferSelect;
+export type InsertContractor = InferInsertModel<typeof contractors>;
+export type Contractor = InferSelectModel<typeof contractors>;
 
 // Disputes table
 export const disputes = pgTable("disputes", {
@@ -74,13 +85,16 @@ export const disputes = pgTable("disputes", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertDisputeSchema = createInsertSchema(disputes).omit({
-  id: true,
-  createdAt: true,
+export const insertDisputeSchema = createInsertSchema(disputes, {
+  jobId: z.number(),
+  contractorId: z.string(),
+  homeownerId: z.string(),
+  reason: z.string(),
+  status: z.string().optional(),
 });
 
-export type InsertDispute = z.infer<typeof insertDisputeSchema>;
-export type Dispute = typeof disputes.$inferSelect;
+export type InsertDispute = InferInsertModel<typeof disputes>;
+export type Dispute = InferSelectModel<typeof disputes>;
 
 // Notifications table
 export const notifications = pgTable("notifications", {
@@ -91,13 +105,14 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertNotificationSchema = createInsertSchema(notifications).omit({
-  id: true,
-  createdAt: true,
+export const insertNotificationSchema = createInsertSchema(notifications, {
+  userId: z.string(),
+  message: z.string(),
+  read: z.boolean().optional(),
 });
 
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = InferInsertModel<typeof notifications>;
+export type Notification = InferSelectModel<typeof notifications>;
 
 // AI Chat - Conversations table
 export const conversations = pgTable("conversations", {
@@ -106,13 +121,12 @@ export const conversations = pgTable("conversations", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertConversationSchema = createInsertSchema(conversations).omit({
-  id: true,
-  createdAt: true,
+export const insertConversationSchema = createInsertSchema(conversations, {
+  title: z.string(),
 });
 
-export type InsertConversation = z.infer<typeof insertConversationSchema>;
-export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = InferInsertModel<typeof conversations>;
+export type Conversation = InferSelectModel<typeof conversations>;
 
 // AI Chat - Messages table
 export const messages = pgTable("messages", {
@@ -123,10 +137,33 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
-  createdAt: true,
+export const insertMessageSchema = createInsertSchema(messages, {
+  conversationId: z.number(),
+  role: z.string(),
+  content: z.string(),
 });
 
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
+export type InsertMessage = InferInsertModel<typeof messages>;
+export type Message = InferSelectModel<typeof messages>;
+
+// Direct Messages table for user-to-user communication
+export const directMessages = pgTable("direct_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  jobId: integer("job_id"),
+  content: text("content").notNull(),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDirectMessageSchema = createInsertSchema(directMessages, {
+  senderId: z.string(),
+  receiverId: z.string(),
+  jobId: z.number().optional(),
+  content: z.string(),
+  read: z.boolean().optional(),
+});
+
+export type InsertDirectMessage = InferInsertModel<typeof directMessages>;
+export type DirectMessage = InferSelectModel<typeof directMessages>;

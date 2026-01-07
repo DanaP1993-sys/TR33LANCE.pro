@@ -4,10 +4,11 @@ import {
   type Contractor, type InsertContractor,
   type Dispute, type InsertDispute,
   type Notification, type InsertNotification,
-  users, jobs, contractors, disputes, notifications
+  type DirectMessage, type InsertDirectMessage,
+  users, jobs, contractors, disputes, notifications, directMessages
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -38,6 +39,13 @@ export interface IStorage {
   getNotifications(userId: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: number): Promise<Notification | undefined>;
+  
+  // Direct Messages
+  getConversations(userId: string): Promise<{ recipientId: string; recipientName: string; lastMessage: string; lastMessageAt: Date; unreadCount: number; jobId: number | null }[]>;
+  getDirectMessages(userId: string, otherUserId: string): Promise<DirectMessage[]>;
+  sendDirectMessage(message: InsertDirectMessage): Promise<DirectMessage>;
+  markDirectMessageRead(id: number): Promise<DirectMessage | undefined>;
+  markConversationRead(userId: string, otherUserId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -158,6 +166,81 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notifications.id, id))
       .returning();
     return updated;
+  }
+
+  // Direct Messages
+  async getConversations(userId: string): Promise<{ recipientId: string; recipientName: string; lastMessage: string; lastMessageAt: Date; unreadCount: number; jobId: number | null }[]> {
+    const allMessages = await db.select().from(directMessages)
+      .where(or(
+        eq(directMessages.senderId, userId),
+        eq(directMessages.receiverId, userId)
+      ))
+      .orderBy(desc(directMessages.createdAt));
+
+    const conversationMap = new Map<string, { recipientId: string; lastMessage: string; lastMessageAt: Date; unreadCount: number; jobId: number | null }>();
+
+    for (const msg of allMessages) {
+      const recipientId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+      
+      if (!conversationMap.has(recipientId)) {
+        conversationMap.set(recipientId, {
+          recipientId,
+          lastMessage: msg.content,
+          lastMessageAt: msg.createdAt,
+          unreadCount: 0,
+          jobId: msg.jobId
+        });
+      }
+      
+      if (msg.receiverId === userId && !msg.read) {
+        const conv = conversationMap.get(recipientId)!;
+        conv.unreadCount++;
+      }
+    }
+
+    const conversations = [];
+    const entries = Array.from(conversationMap.entries());
+    for (const [recipientId, conv] of entries) {
+      const recipient = await this.getUser(recipientId);
+      conversations.push({
+        ...conv,
+        recipientName: recipient?.name || recipient?.username || 'Unknown User'
+      });
+    }
+
+    return conversations.sort((a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime());
+  }
+
+  async getDirectMessages(userId: string, otherUserId: string): Promise<DirectMessage[]> {
+    return db.select().from(directMessages)
+      .where(or(
+        and(eq(directMessages.senderId, userId), eq(directMessages.receiverId, otherUserId)),
+        and(eq(directMessages.senderId, otherUserId), eq(directMessages.receiverId, userId))
+      ))
+      .orderBy(directMessages.createdAt);
+  }
+
+  async sendDirectMessage(message: InsertDirectMessage): Promise<DirectMessage> {
+    const [newMessage] = await db.insert(directMessages).values(message).returning();
+    return newMessage;
+  }
+
+  async markDirectMessageRead(id: number): Promise<DirectMessage | undefined> {
+    const [updated] = await db.update(directMessages)
+      .set({ read: true })
+      .where(eq(directMessages.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markConversationRead(userId: string, otherUserId: string): Promise<void> {
+    await db.update(directMessages)
+      .set({ read: true })
+      .where(and(
+        eq(directMessages.senderId, otherUserId),
+        eq(directMessages.receiverId, userId),
+        eq(directMessages.read, false)
+      ));
   }
 }
 

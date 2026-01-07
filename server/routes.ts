@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema } from "@shared/schema";
+import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema } from "@shared/schema";
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -488,6 +488,55 @@ export async function registerRoutes(
 
   // Register AI chat routes from integration
   registerChatRoutes(app);
+
+  // Direct Messaging API
+  app.get("/api/messages/conversations", requireAuth(), async (req: any, res) => {
+    try {
+      const conversations = await storage.getConversations(req.user.id);
+      res.json(conversations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  app.get("/api/messages/:userId", requireAuth(), async (req: any, res) => {
+    try {
+      const messages = await storage.getDirectMessages(req.user.id, req.params.userId);
+      await storage.markConversationRead(req.user.id, req.params.userId);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/messages", requireAuth(), async (req: any, res) => {
+    try {
+      const parsed = insertDirectMessageSchema.safeParse({
+        ...req.body,
+        senderId: req.user.id
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const message = await storage.sendDirectMessage(parsed.data);
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  app.patch("/api/messages/:id/read", requireAuth(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const message = await storage.markDirectMessageRead(id);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      res.json(message);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark message read" });
+    }
+  });
 
   // AI Completion endpoint - Returns OpenAI-compatible format for Flutter
   app.post("/api/ai/chat", async (req, res) => {
