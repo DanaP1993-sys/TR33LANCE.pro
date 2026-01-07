@@ -54,8 +54,6 @@ async function initStripe() {
   }
 }
 
-await initStripe();
-
 app.post(
   '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
@@ -124,6 +122,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await initStripe();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -160,3 +159,4 @@ app.use((req, res, next) => {
     },
   );
 })();
+export default app;
