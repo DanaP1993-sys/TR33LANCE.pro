@@ -10,7 +10,7 @@ export async function registerRoutes(
   
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+    res.json({ status: "ok" });
   });
 
   // Jobs API
