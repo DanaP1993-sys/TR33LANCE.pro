@@ -62,3 +62,71 @@ export const insertContractorSchema = createInsertSchema(contractors).omit({
 
 export type InsertContractor = z.infer<typeof insertContractorSchema>;
 export type Contractor = typeof contractors.$inferSelect;
+
+// Disputes table
+export const disputes = pgTable("disputes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  jobId: integer("job_id").notNull(),
+  contractorId: varchar("contractor_id").notNull(),
+  homeownerId: varchar("homeowner_id").notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("open"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDisputeSchema = createInsertSchema(disputes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+export type Dispute = typeof disputes.$inferSelect;
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+// AI Chat - Conversations table
+export const conversations = pgTable("conversations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+// AI Chat - Messages table
+export const messages = pgTable("messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  conversationId: integer("conversation_id").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;

@@ -2,10 +2,12 @@ import {
   type User, type InsertUser,
   type Job, type InsertJob,
   type Contractor, type InsertContractor,
-  users, jobs, contractors
+  type Dispute, type InsertDispute,
+  type Notification, type InsertNotification,
+  users, jobs, contractors, disputes, notifications
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -25,6 +27,17 @@ export interface IStorage {
   getContractors(): Promise<Contractor[]>;
   getContractor(id: number): Promise<Contractor | undefined>;
   createContractor(contractor: InsertContractor): Promise<Contractor>;
+  
+  // Disputes
+  getDisputes(): Promise<Dispute[]>;
+  getDispute(id: number): Promise<Dispute | undefined>;
+  createDispute(dispute: InsertDispute): Promise<Dispute>;
+  updateDispute(id: number, updates: Partial<Dispute>): Promise<Dispute | undefined>;
+  
+  // Notifications
+  getNotifications(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: number): Promise<Notification | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -102,6 +115,49 @@ export class DatabaseStorage implements IStorage {
   async createContractor(contractor: InsertContractor): Promise<Contractor> {
     const [newContractor] = await db.insert(contractors).values(contractor).returning();
     return newContractor;
+  }
+
+  // Disputes
+  async getDisputes(): Promise<Dispute[]> {
+    return db.select().from(disputes).orderBy(desc(disputes.createdAt));
+  }
+
+  async getDispute(id: number): Promise<Dispute | undefined> {
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, id));
+    return dispute;
+  }
+
+  async createDispute(dispute: InsertDispute): Promise<Dispute> {
+    const [newDispute] = await db.insert(disputes).values(dispute).returning();
+    return newDispute;
+  }
+
+  async updateDispute(id: number, updates: Partial<Dispute>): Promise<Dispute | undefined> {
+    const [updated] = await db.update(disputes)
+      .set(updates)
+      .where(eq(disputes.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Notifications
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db.insert(notifications).values(notification).returning();
+    return newNotification;
+  }
+
+  async markNotificationRead(id: number): Promise<Notification | undefined> {
+    const [updated] = await db.update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    return updated;
   }
 }
 

@@ -1,10 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertContractorSchema } from "@shared/schema";
+import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema } from "@shared/schema";
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { registerChatRoutes } from "./replit_integrations/chat";
+import OpenAI from "openai";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -377,6 +379,98 @@ export async function registerRoutes(
     }
   });
 
+  // Verification API
+  app.post("/api/users/:id/verify", requireAuth(), async (req: any, res) => {
+    try {
+      const user = await storage.updateUser(req.params.id, { verified: true });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ verified: true, userId: user.id });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify user" });
+    }
+  });
+
+  // Disputes API
+  app.get("/api/disputes", requireAuth(), async (req: any, res) => {
+    try {
+      const allDisputes = await storage.getDisputes();
+      res.json(allDisputes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch disputes" });
+    }
+  });
+
+  app.post("/api/disputes", requireAuth(), async (req: any, res) => {
+    try {
+      const parsed = insertDisputeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const dispute = await storage.createDispute(parsed.data);
+      res.status(201).json(dispute);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create dispute" });
+    }
+  });
+
+  app.patch("/api/disputes/:id", requireAuth(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      const validStatuses = ["open", "resolved", "rejected"];
+      
+      if (status && !validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const dispute = await storage.updateDispute(id, { status });
+      if (!dispute) {
+        return res.status(404).json({ error: "Dispute not found" });
+      }
+      res.json(dispute);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update dispute" });
+    }
+  });
+
+  // Notifications API
+  app.get("/api/notifications", requireAuth(), async (req: any, res) => {
+    try {
+      const userNotifications = await storage.getNotifications(req.user.id);
+      res.json(userNotifications);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications", requireAuth(), async (req: any, res) => {
+    try {
+      const parsed = insertNotificationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const notification = await storage.createNotification(parsed.data);
+      res.status(201).json(notification);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create notification" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", requireAuth(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const notification = await storage.markNotificationRead(id);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark notification read" });
+    }
+  });
+
   // Seed contractors if none exist
   app.post("/api/seed", async (req, res) => {
     try {
@@ -389,6 +483,74 @@ export async function registerRoutes(
       res.json({ message: "Seed complete" });
     } catch (error) {
       res.status(500).json({ error: "Failed to seed data" });
+    }
+  });
+
+  // Register AI chat routes from integration
+  registerChatRoutes(app);
+
+  // AI Completion endpoint - Returns OpenAI-compatible format for Flutter
+  app.post("/api/ai/chat", async (req, res) => {
+    try {
+      const { messages, model = "gpt-4o-mini" } = req.body;
+      
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "messages array is required" });
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model,
+        messages,
+        max_tokens: 2048,
+      });
+
+      res.json(completion);
+    } catch (error: any) {
+      console.error("AI chat error:", error.message);
+      res.status(500).json({ error: "Failed to get AI response" });
+    }
+  });
+
+  // AI Job Analysis - Parses job descriptions and estimates
+  app.post("/api/ai/analyze-job", async (req, res) => {
+    try {
+      const { description, location } = req.body;
+      
+      if (!description) {
+        return res.status(400).json({ error: "Job description is required" });
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a tree service pricing AI. Analyze tree service job descriptions and provide estimates. Return JSON with: title (short job title), estimatedPrice (number in USD), riskLevel (low/medium/high), estimatedHours (number), requiredEquipment (array of strings).`
+          },
+          {
+            role: "user",
+            content: `Analyze this tree service job: ${description}${location ? ` Location: ${location}` : ''}`
+          }
+        ],
+        max_tokens: 500,
+        response_format: { type: "json_object" }
+      });
+
+      const analysis = JSON.parse(completion.choices[0]?.message?.content || "{}");
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Job analysis error:", error.message);
+      res.status(500).json({ error: "Failed to analyze job" });
     }
   });
 
