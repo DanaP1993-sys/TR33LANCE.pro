@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Terms from "@/pages/Terms";
 import PostJob from "@/pages/PostJob";
+import Messages from "@/pages/Messages";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 
@@ -15,6 +16,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/post" component={PostJob} />
+        <Route path="/messages" component={Messages} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>
