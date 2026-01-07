@@ -52,13 +52,23 @@ async function buildAll() {
     bundle: true,
     format: "esm",
     outfile: "dist/index.js",
-    banner: { js: `import { createRequire } from "module"; const require = createRequire(import.meta.url);` },
     define: {
-      "process.env.NODE_ENV": '"production"',
+      "process.env.NODE_ENV": `"${process.env.NODE_ENV || "production"}"`,
     },
     minify: true,
+    sourcemap: process.env.NODE_ENV !== "production",
     external: externals,
     logLevel: "info",
+    banner: {
+      js: `
+/*
+  © 2024 Dana Palmer. All rights reserved.
+  Tree-Lance Platform
+  Bundled server module
+*/
+import { createRequire } from "module"; const require = createRequire(import.meta.url);
+    `,
+    },
   });
 }
 
