@@ -73,6 +73,11 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <footer className="mt-12 pt-8 border-t border-border text-center text-xs text-muted-foreground">
+        <p>&copy; 2024 Dana Palmer. All rights reserved.</p>
+        <p className="mt-1">Tree-Lance IP</p>
+      </footer>
     </div>
   );
 }
