@@ -2,6 +2,7 @@ import Map from '@/components/Map';
 import JobCard from '@/components/JobCard';
 import { useApp } from '@/lib/context';
 import heroImage from '@assets/generated_images/dark_moody_forest_background_with_industrial_lighting.png';
+import logoImage from '@assets/tr33lance_logo.jpeg';
 
 export default function Home() {
   const { jobs } = useApp();
@@ -16,10 +17,13 @@ export default function Home() {
           alt="Tree Service" 
           className="absolute inset-0 w-full h-full object-cover opacity-80"
         />
-        <div className="absolute inset-0 z-20 flex flex-col justify-center px-8 md:px-12">
-          <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-2">
-            TREE<span className="text-primary">-</span>LANCE
-          </h2>
+        <div className="absolute inset-0 z-20 flex flex-col justify-center items-start px-8 md:px-12">
+          <img 
+            src={logoImage} 
+            alt="TR33LANCE.pro" 
+            className="h-24 md:h-32 w-auto object-contain mb-4"
+            data-testid="img-logo-hero"
+          />
           <p className="text-lg md:text-xl text-white/80 max-w-lg">
             Connect with verified tree service professionals in your area. Secure payments. Fast service.
           </p>

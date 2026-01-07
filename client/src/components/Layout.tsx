@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { TreePine, Plus, FileText, Home } from "lucide-react";
+import { Plus, FileText, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoImage from '@assets/tr33lance_logo.jpeg';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -17,10 +18,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="w-full md:w-64 border-r border-border bg-sidebar p-4 flex flex-col justify-between sticky top-0 h-auto md:h-screen z-50">
         <div>
           <div className="flex items-center gap-2 mb-8 px-2">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
-              <TreePine className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl font-display font-bold tracking-wider">TREE-LANCE</h1>
+            <img 
+              src={logoImage} 
+              alt="TR33LANCE" 
+              className="h-12 w-auto object-contain"
+              data-testid="img-logo-sidebar"
+            />
           </div>
 
           <nav className="space-y-1">
