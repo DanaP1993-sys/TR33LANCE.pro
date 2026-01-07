@@ -1,0 +1,62 @@
+import express from "express";
+import multer from "multer";
+import { estimateJob } from "./aiEstimator.js";
+import { createPaymentIntent } from "./stripePayment.js";
+import { uploadJobPhoto } from "./jobDocs.js";
+import { verifyContractor } from "./contractorVerification.js";
+
+const app = express();
+const upload = multer({ dest: "uploads/" });
+
+app.use(express.json());
+
+// AI Job Estimation
+app.post("/api/job-estimate", upload.single("treePhoto"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
+    const result = await estimateJob(filePath);
+    res.json({ success: true, estimate: result });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Estimation failed" });
+  }
+});
+
+// Stripe Payment
+app.post("/api/create-payment", async (req, res) => {
+  try {
+    const { amount, contractorId } = req.body;
+    const clientSecret = await createPaymentIntent(amount, contractorId);
+    res.json({ success: true, clientSecret });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Payment creation failed" });
+  }
+});
+
+// Upload Job Photos
+app.post("/api/upload-photo", upload.single("jobPhoto"), async (req, res) => {
+  try {
+    const { jobId, type, latitude, longitude } = req.body;
+    const location = { lat: latitude, lng: longitude };
+    const url = await uploadJobPhoto(req.file.path, jobId, type, location);
+    res.json({ success: true, url });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Photo upload failed" });
+  }
+});
+
+// Contractor Verification
+app.post("/api/verify-contractor", (req, res) => {
+  try {
+    const contractor = req.body;
+    const verified = verifyContractor(contractor);
+    res.json({ success: true, verified });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: "Verification failed" });
+  }
+});
+
+app.listen(5000, () => console.log("Tree-Lance server running on port 5000"));
