@@ -46,7 +46,11 @@ Full-stack marketplace connecting homeowners with tree service contractors.
 
 ### Notifications & Chat
 - Push Alerts: /api/notifications
-- Live Messaging: WebSocket ready
+- Direct Messaging: /api/messages (user-to-user messaging)
+  - GET /api/messages/conversations - List all conversations
+  - GET /api/messages/:userId - Get messages with a specific user
+  - POST /api/messages - Send a message
+  - PATCH /api/messages/:id/read - Mark message as read
 
 ## API Response Format (Flutter Compatible)
 
@@ -71,6 +75,8 @@ requested → accepted → in_progress → completed/cancelled
 - Contractor Payout: 80%
 
 ## Recent Changes
+- 2026-01-07: Added Direct Messaging feature (user-to-user chat with job context)
+- 2026-01-07: Added Messages page to frontend navigation
 - 2026-01-07: Added AI Integration (OpenAI via Replit AI Integrations)
 - 2026-01-07: Added /api/ai/chat endpoint for Flutter compatibility
 - 2026-01-07: Added /api/ai/analyze-job for pricing AI
