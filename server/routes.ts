@@ -13,6 +13,9 @@ import path from "path";
 import { estimateJob, estimateFromDescription } from "./aiEstimator";
 import { uploadJobPhoto, validateJobDocumentation, getJobPhotosPath } from "./jobDocs";
 import { verifyContractor, getPayoutRate, getAllTierBenefits } from "./contractorVerification";
+import rateLimit from "express-rate-limit";
+
+const startTime = Date.now();
 
 const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
@@ -34,6 +37,14 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Rate limiting for API routes
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per window
+    message: { error: "Too many requests, please try again later" }
+  });
+  app.use('/api', limiter);
+
   // Disable caching for all API routes
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
@@ -42,7 +53,12 @@ export async function registerRoutes(
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    const uptime = Math.floor((Date.now() - startTime) / 1000);
+    res.json({ 
+      status: "ok",
+      uptime,
+      env: process.env.NODE_ENV || "development"
+    });
   });
 
   // Auth routes
