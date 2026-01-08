@@ -34,6 +34,12 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Disable caching for all API routes
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
