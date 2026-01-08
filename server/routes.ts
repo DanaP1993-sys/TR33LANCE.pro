@@ -14,8 +14,10 @@ import { estimateJob, estimateFromDescription } from "./aiEstimator";
 import { uploadJobPhoto, validateJobDocumentation, getJobPhotosPath } from "./jobDocs";
 import { verifyContractor, getPayoutRate, getAllTierBenefits } from "./contractorVerification";
 import rateLimit from "express-rate-limit";
+import parseForwarded from 'forwarded-parse';
 
 const startTime = Date.now();
+const NUMBER_OF_PROXIES_TO_TRUST = 1;
 
 const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
@@ -41,7 +43,25 @@ export async function registerRoutes(
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per window
-    message: { error: "Too many requests, please try again later" }
+    message: { error: "Too many requests, please try again later" },
+    keyGenerator: (req: any, _res: any) => {
+      let ip = req.ip;
+      try {
+        const forwarded = req.headers.forwarded;
+        if (forwarded) {
+          const forwards = parseForwarded(forwarded);
+          if (forwards && forwards.length >= NUMBER_OF_PROXIES_TO_TRUST) {
+            ip = forwards[forwards.length - NUMBER_OF_PROXIES_TO_TRUST].for;
+          }
+        }
+      } catch (ex) {
+        console.error(
+          `Error parsing Forwarded header ${req.headers.forwarded} from ${req.ip}:`,
+          ex
+        );
+      }
+      return ip || req.ip;
+    }
   });
   app.use('/api', limiter);
 

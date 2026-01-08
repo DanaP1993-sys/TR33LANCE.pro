@@ -59,6 +59,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.1",
+    "forwarded-parse": "^2.1.2",
     "framer-motion": "^12.23.24",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.3",
