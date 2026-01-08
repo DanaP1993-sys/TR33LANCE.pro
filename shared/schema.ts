@@ -61,6 +61,8 @@ export const contractors = pgTable("contractors", {
   lat: real("lat").notNull(),
   lng: real("lng").notNull(),
   stripeId: text("stripe_id").notNull(),
+  isIndependent: boolean("is_independent").notNull().default(true),
+  liabilityAccepted: boolean("liability_accepted").notNull().default(true),
 });
 
 export const insertContractorSchema = createInsertSchema(contractors, {
@@ -69,6 +71,8 @@ export const insertContractorSchema = createInsertSchema(contractors, {
   lat: z.number(),
   lng: z.number(),
   stripeId: z.string(),
+  isIndependent: z.boolean().optional(),
+  liabilityAccepted: z.boolean().optional(),
 });
 
 export type InsertContractor = InferInsertModel<typeof contractors>;
