@@ -497,6 +497,9 @@ export async function registerRoutes(
 
   // Seed contractors if none exist
   app.post("/api/seed", async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Seeding disabled in production' });
+    }
     try {
       const existing = await storage.getContractors();
       if (existing.length === 0) {
