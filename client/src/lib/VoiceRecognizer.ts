@@ -6,7 +6,7 @@ export class VoiceRecognizer {
     if (!SpeechRecognition) throw new Error("Browser does not support SpeechRecognition");
 
     this.recognition = new SpeechRecognition();
-    this.recognition.continuous = true;
+    this.recognition.continuous = true; // Stay active for hands-free field use
     this.recognition.interimResults = false;
     this.recognition.lang = "en-US";
 
