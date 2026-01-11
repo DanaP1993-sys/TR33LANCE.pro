@@ -9,17 +9,19 @@ export function GlassInterface() {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
+    let vc: VoiceControl | null = null;
     try {
-      VoiceControl.startListening((cmd) => {
+      vc = new VoiceControl((cmd) => {
         handleVoiceCommand(cmd);
       });
+      vc.start();
       setIsListening(true);
     } catch (e) {
       console.error("Failed to start voice control:", e);
     }
 
     return () => {
-      VoiceControl.stopListening();
+      if (vc) vc.stop();
     };
   }, []);
 
