@@ -7,7 +7,7 @@ export class VoiceRecognizer {
 
     this.recognition = new SpeechRecognition();
     this.recognition.continuous = true; // Stay active for hands-free field use
-    this.recognition.interimResults = false;
+    this.recognition.interimResults = false; // Only process finalized commands for accuracy
     this.recognition.lang = "en-US";
 
     this.recognition.onresult = (event: any) => {
