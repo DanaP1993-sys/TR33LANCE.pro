@@ -9,6 +9,7 @@ import PostJob from "@/pages/PostJob";
 import Messages from "@/pages/Messages";
 import IoTDashboard from "@/pages/IoTDashboard";
 import Features from "@/pages/Features";
+import Download from "@/pages/Download";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/messages" component={Messages} />
         <Route path="/iot" component={IoTDashboard} />
         <Route path="/features" component={Features} />
+        <Route path="/download" component={Download} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>
