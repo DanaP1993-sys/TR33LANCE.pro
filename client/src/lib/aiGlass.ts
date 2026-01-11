@@ -67,4 +67,29 @@ export async function handleVoiceCommand(command: string) {
       await SmartGlasses.alert();
     }
   }
+
+  if (cmd.includes("what's next")) {
+    console.log("Processing 'what's next'...");
+    try {
+      const response = await apiRequest("GET", "/api/jobs");
+      const jobs = await response.json();
+      const nextJob = jobs.find((j: any) => j.status === 'accepted' || j.status === 'requested');
+      
+      let msg = "";
+      if (nextJob) {
+        msg = `Your next job is at ${nextJob.address}. ${nextJob.description}`;
+      } else {
+        msg = "No upcoming tasks found.";
+      }
+      
+      console.log("Voice Feedback:", msg);
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(msg);
+        window.speechSynthesis.speak(utterance);
+      }
+      await SmartGlasses.alert();
+    } catch (err) {
+      console.error("Error in what's next command:", err);
+    }
+  }
 }

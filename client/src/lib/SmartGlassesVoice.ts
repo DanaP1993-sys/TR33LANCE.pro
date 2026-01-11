@@ -136,6 +136,32 @@ export class SmartGlassesVoice {
         });
       }
       await this.alert();
+    } else if (command.includes("what's next")) {
+      console.log("Processing 'what's next' command...");
+      try {
+        const response = await apiRequest("GET", "/api/jobs");
+        const jobs = await response.json();
+        const nextJob = jobs.find((j: any) => j.status === 'accepted' || j.status === 'requested');
+        
+        if (nextJob) {
+          const msg = `Your next job is at ${nextJob.address}. Description: ${nextJob.description}`;
+          console.log("AI Audio Feedback:", msg);
+          // In a real implementation, we would use SpeechSynthesis here
+          if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(msg);
+            window.speechSynthesis.speak(utterance);
+          }
+        } else {
+          const msg = "You have no upcoming jobs scheduled.";
+          if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(msg);
+            window.speechSynthesis.speak(utterance);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch upcoming task:", err);
+      }
+      await this.alert();
     } else {
       // Default AI handling
       console.log("AI command processed:", aiResult.text || aiResult.title);
