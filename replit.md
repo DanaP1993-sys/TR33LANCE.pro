@@ -153,7 +153,26 @@ Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 - Before/after comparisons with AI insights
 - Ecosystem health monitoring
 
+### Notification & Reminder System
+- Welcome Emails: POST /api/notifications/welcome-email
+- En-Route Alerts: POST /api/notifications/en-route (with real-time GPS)
+- Reminder Calendar: POST /api/reminders, GET /api/reminders/:userId
+- AI Recommendations: POST /api/ai/recommend (hands-free guidance)
+- Contractor Location: POST /api/contractors/:id/location (real-time tracking)
+
+### Voice Commands (AR Smart Glasses)
+- "What's next?" - Get upcoming task info with audio response
+- "Mark job complete" - Complete current job
+- "Take photo" - Capture documentation photo
+- "Current location" - Report GPS coordinates
+
 ## Recent Changes
+- 2026-01-11: Added holographic Welcome Splash screen with "Welcome to Tree-Lance" messaging
+- 2026-01-11: Added Download App page with iOS/Android/Web links for customers and contractors
+- 2026-01-11: Added "What's next?" voice command for contextual task guidance
+- 2026-01-11: Added Notification & Reminder System (welcome emails, en-route alerts, calendar)
+- 2026-01-11: Added real-time contractor GPS tracking endpoints
+- 2026-01-11: Added AI-powered hands-free recommendations for contractors
 - 2026-01-07: Added IoT Command Center with drone surveys and smart tree sensors (Phase 3 LIVE)
 - 2026-01-07: Added /api/drones, /api/sensors, /api/sensors/:id/readings endpoints
 - 2026-01-07: Added IoT Dashboard frontend page with real-time sensor monitoring

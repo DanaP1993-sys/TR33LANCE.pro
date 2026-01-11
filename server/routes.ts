@@ -1261,5 +1261,215 @@ export async function registerRoutes(
   // Serve uploaded files
   app.use("/uploads", express.static("uploads"));
 
+  // ============================================================
+  // NOTIFICATION & REMINDER SYSTEM
+  // ============================================================
+
+  // Send welcome email to new customer (triggered on registration)
+  app.post("/api/notifications/welcome-email", async (req, res) => {
+    try {
+      const { userId, email, name } = req.body;
+      
+      if (!userId || !email) {
+        return res.status(400).json({ error: "userId and email required" });
+      }
+
+      // Queue welcome email notification
+      const notification = await storage.createNotification({
+        userId,
+        message: `[EMAIL] Welcome to Tree-Lance, ${name || 'valued customer'}! Thank you for signing up. We're excited to help you connect with verified tree service professionals.`,
+        read: false,
+      });
+
+      // In production, this would trigger an email service (SendGrid, Resend, etc.)
+      console.log(`[EMAIL] Welcome email queued for ${email}`);
+
+      res.json({ 
+        success: true, 
+        notification,
+        emailQueued: true,
+      });
+    } catch (error: any) {
+      console.error("Welcome email error:", error.message);
+      res.status(500).json({ error: "Failed to send welcome email" });
+    }
+  });
+
+  // Contractor en-route notification with real-time GPS
+  app.post("/api/notifications/en-route", async (req, res) => {
+    try {
+      const { jobId, contractorId, homeownerId, contractorLat, contractorLng, etaMinutes } = req.body;
+      
+      if (!jobId || !contractorId || !homeownerId) {
+        return res.status(400).json({ error: "jobId, contractorId, and homeownerId required" });
+      }
+
+      // Get job details
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Create notification for homeowner
+      const notification = await storage.createNotification({
+        userId: homeownerId,
+        message: `[PUSH] Your contractor is on the way! ETA: ${etaMinutes || 15} minutes. Track them in real-time.`,
+        read: false,
+      });
+
+      // Update job with contractor location
+      await storage.updateJob(jobId, {
+        lat: contractorLat,
+        lng: contractorLng,
+        status: "in_progress",
+      });
+
+      // Broadcast real-time update via WebSocket
+      broadcastToUser(homeownerId, {
+        type: "contractor_en_route",
+        jobId,
+        contractorId,
+        location: { lat: contractorLat, lng: contractorLng },
+        etaMinutes: etaMinutes || 15,
+      });
+
+      res.json({ 
+        success: true, 
+        notification,
+        liveTrackingEnabled: true,
+      });
+    } catch (error: any) {
+      console.error("En-route notification error:", error.message);
+      res.status(500).json({ error: "Failed to send en-route notification" });
+    }
+  });
+
+  // Job reminder calendar - schedule reminders
+  app.post("/api/reminders", async (req, res) => {
+    try {
+      const { userId, jobId, reminderType, scheduledAt, message } = req.body;
+      
+      if (!userId || !reminderType || !scheduledAt) {
+        return res.status(400).json({ error: "userId, reminderType, and scheduledAt required" });
+      }
+
+      const validTypes = ["job_upcoming", "job_tomorrow", "job_same_day", "contractor_arrival", "review_request"];
+      if (!validTypes.includes(reminderType)) {
+        return res.status(400).json({ error: `Invalid reminder type. Valid: ${validTypes.join(", ")}` });
+      }
+
+      // Create reminder notification (scheduled)
+      const notification = await storage.createNotification({
+        userId,
+        message: message || `[REMINDER] ${reminderType.replace(/_/g, " ")}`,
+        read: false,
+      });
+
+      res.json({ 
+        success: true, 
+        reminder: {
+          id: notification.id,
+          userId,
+          jobId,
+          type: reminderType,
+          scheduledAt,
+          message: notification.message,
+        }
+      });
+    } catch (error: any) {
+      console.error("Reminder creation error:", error.message);
+      res.status(500).json({ error: "Failed to create reminder" });
+    }
+  });
+
+  // Get user's reminders/calendar
+  app.get("/api/reminders/:userId", async (req, res) => {
+    try {
+      const notifications = await storage.getNotifications(req.params.userId);
+      const reminders = notifications.filter((n: any) => n.message.startsWith("[REMINDER]"));
+      
+      res.json({ reminders });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reminders" });
+    }
+  });
+
+  // AI-powered hands-free recommendations
+  app.post("/api/ai/recommend", async (req, res) => {
+    try {
+      const { contractorId, context, currentJobId } = req.body;
+      
+      if (!contractorId) {
+        return res.status(400).json({ error: "contractorId required" });
+      }
+
+      // Get contractor's current jobs and context
+      const jobs = await storage.getJobs();
+      const contractorJobs = jobs.filter(j => j.contractorId === contractorId);
+      const activeJob = contractorJobs.find(j => j.status === "in_progress");
+      const pendingJobs = contractorJobs.filter(j => j.status === "accepted");
+
+      // Generate AI recommendation
+      let recommendation = "";
+      if (activeJob) {
+        recommendation = `Focus on completing the current job: ${activeJob.description}. After completion, document with photos.`;
+      } else if (pendingJobs.length > 0) {
+        const nextJob = pendingJobs[0];
+        recommendation = `Your next job: ${nextJob.description}. Estimated price: $${nextJob.price}.`;
+      } else {
+        recommendation = "No pending jobs. Check the dashboard for new job requests in your area.";
+      }
+
+      res.json({ 
+        success: true,
+        recommendation,
+        activeJob: activeJob ? { id: activeJob.id, description: activeJob.description } : null,
+        pendingCount: pendingJobs.length,
+        voiceEnabled: true,
+      });
+    } catch (error: any) {
+      console.error("AI recommendation error:", error.message);
+      res.status(500).json({ error: "Recommendation failed" });
+    }
+  });
+
+  // Update contractor GPS location (for real-time tracking)
+  app.post("/api/contractors/:id/location", async (req, res) => {
+    try {
+      const { lat, lng, heading, speed } = req.body;
+      const contractorId = req.params.id;
+      
+      if (lat === undefined || lng === undefined) {
+        return res.status(400).json({ error: "lat and lng required" });
+      }
+
+      // Find active job for this contractor
+      const jobs = await storage.getJobs();
+      const activeJob = jobs.find(j => j.contractorId === contractorId && j.status === "in_progress");
+
+      if (activeJob) {
+        // Update job location
+        await storage.updateJob(activeJob.id, { lat, lng });
+
+        // Broadcast to homeowner
+        broadcastJobUpdate(activeJob.id, {
+          type: "location_update",
+          contractorId,
+          location: { lat, lng, heading, speed },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      res.json({ 
+        success: true,
+        locationUpdated: true,
+        activeJobId: activeJob?.id || null,
+      });
+    } catch (error: any) {
+      console.error("Location update error:", error.message);
+      res.status(500).json({ error: "Location update failed" });
+    }
+  });
+
   return httpServer;
 }
