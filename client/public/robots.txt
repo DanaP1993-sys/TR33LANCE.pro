@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tree-lance.replit.app/sitemap.xml
+Sitemap: https://tr33lance.pro/sitemap.xml
 
 # Tree-Lance - The #1 Tree Service App
 # Connect with verified tree service contractors

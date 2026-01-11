@@ -1,0 +1,108 @@
+{
+  "colorScheme": "dark",
+  "fonts": [
+    {
+      "family": "sans-serif",
+      "count": 29
+    },
+    {
+      "family": "Inter",
+      "count": 16
+    },
+    {
+      "family": "Helvetica Neue",
+      "count": 8
+    },
+    {
+      "family": "Arial",
+      "count": 8
+    },
+    {
+      "family": "Helvetica",
+      "count": 8
+    },
+    {
+      "family": "Rajdhani",
+      "count": 5
+    },
+    {
+      "family": "Lucida Console",
+      "count": 2
+    },
+    {
+      "family": "Monaco",
+      "count": 2
+    },
+    {
+      "family": "monospace",
+      "count": 2
+    }
+  ],
+  "colors": {
+    "primary": "#21C45D",
+    "accent": "#0B1C13",
+    "background": "#09090B",
+    "textPrimary": "#09090B",
+    "link": "#0B1C13"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Inter",
+      "heading": "Rajdhani"
+    },
+    "fontStacks": {
+      "body": [
+        "Inter",
+        "sans-serif"
+      ],
+      "heading": [
+        "Rajdhani",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Inter",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "20px",
+      "h2": "48px",
+      "body": "12px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "3px"
+  },
+  "components": {},
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "https://tr33lance.pro/favicon.png",
+    "ogImage": "https://TREELANCE-DanaNET.replit.app/opengraph.jpg"
+  },
+  "__framework_hints": [],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Logo rejected: Red flags detected (small square icon). Heuristic fallback: Good indicators: in header, no link (brand logos usually link to homepage, penalty), header location, visible, top-left position, highest logo on page, too small (likely icon, penalty), small square icon (likely UI icon, heavy penalty), SVG format. Score: 50 (ahead by 22 points)",
+    "confidence": 0.65,
+    "rejected": true
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "confidence": 0
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  }
+}
