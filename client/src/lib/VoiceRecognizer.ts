@@ -20,8 +20,7 @@ export class VoiceRecognizer {
 
     this.recognition.onerror = (err: any) => {
       console.error("Voice recognition error:", err);
-      // Auto-restart after short delay to avoid crash loops
-      setTimeout(() => this.start(), 500);
+      this.start(); // automatically restart recognition
     };
 
     this.recognition.onend = () => {
