@@ -11,6 +11,8 @@ import Messages from "@/pages/Messages";
 import IoTDashboard from "@/pages/IoTDashboard";
 import Features from "@/pages/Features";
 import Download from "@/pages/Download";
+import Signup from "@/pages/Signup";
+import Login from "@/pages/Login";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 import WelcomeSplash from "@/components/WelcomeSplash";
@@ -25,6 +27,8 @@ function Router() {
         <Route path="/iot" component={IoTDashboard} />
         <Route path="/features" component={Features} />
         <Route path="/download" component={Download} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/login" component={Login} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>

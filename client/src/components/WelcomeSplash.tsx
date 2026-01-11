@@ -159,3 +159,7 @@ export default function WelcomeSplash({ onComplete }: WelcomeSplashProps) {
     </AnimatePresence>
   );
 }
+// Run the code
+function run() {
+    console.log('Running...');
+}

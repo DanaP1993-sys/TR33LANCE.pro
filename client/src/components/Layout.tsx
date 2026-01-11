@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Plus, FileText, Home, MessageCircle, Cpu, Sparkles, Download } from "lucide-react";
+import { Plus, FileText, Home, MessageCircle, Cpu, Sparkles, Download, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoImage from '@assets/tr33lance_logo.jpeg';
 
@@ -13,6 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/messages", label: "Messages", icon: MessageCircle },
     { href: "/iot", label: "IoT Center", icon: Cpu },
     { href: "/download", label: "Download App", icon: Download },
+    { href: "/signup", label: "Sign Up Free", icon: UserPlus },
     { href: "/terms", label: "Terms", icon: FileText },
   ];
 
