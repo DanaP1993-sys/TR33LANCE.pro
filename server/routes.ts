@@ -230,6 +230,19 @@ export async function registerRoutes(
     }
   });
 
+  // Get the next upcoming job for the current contractor
+  app.get("/api/jobs/next", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs();
+      // For now, return the first requested or accepted job
+      // In a real app, this would filter by the logged-in contractor's ID
+      const nextJob = jobs.find(j => ["requested", "accepted", "in_progress"].includes(j.status));
+      res.json(nextJob || {});
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch next job" });
+    }
+  });
+
   // Contractors API
   app.get("/api/contractors", async (req, res) => {
     try {

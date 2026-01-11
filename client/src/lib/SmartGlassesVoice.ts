@@ -136,30 +136,32 @@ export class SmartGlassesVoice {
         });
       }
       await this.alert();
-    } else if (command.includes("what's next")) {
+    } else if (command.includes("what's next") || command.includes("whats next")) {
       console.log("Processing 'what's next' command...");
       try {
-        const response = await apiRequest("GET", "/api/jobs");
-        const jobs = await response.json();
-        const nextJob = jobs.find((j: any) => j.status === 'accepted' || j.status === 'requested');
+        const response = await fetch("/api/jobs/next");
+        if (!response.ok) throw new Error("Failed to fetch next job");
+        const nextJob = await response.json();
         
-        if (nextJob) {
-          const msg = `Your next job is at ${nextJob.address}. Description: ${nextJob.description}`;
-          console.log("AI Audio Feedback:", msg);
-          // In a real implementation, we would use SpeechSynthesis here
-          if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(msg);
-            window.speechSynthesis.speak(utterance);
-          }
+        let msg = "";
+        if (nextJob && nextJob.id) {
+          msg = `Your next job is ${nextJob.title || 'a tree service request'}. Status is ${nextJob.status}. Description: ${nextJob.description}`;
         } else {
-          const msg = "You have no upcoming jobs scheduled.";
-          if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(msg);
-            window.speechSynthesis.speak(utterance);
-          }
+          msg = "You have no upcoming jobs scheduled.";
+        }
+        
+        console.log("AI Audio Feedback:", msg);
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel(); // Clear any pending speech
+          const utterance = new SpeechSynthesisUtterance(msg);
+          window.speechSynthesis.speak(utterance);
         }
       } catch (err) {
         console.error("Failed to fetch upcoming task:", err);
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance("Sorry, I couldn't retrieve your next task right now.");
+          window.speechSynthesis.speak(utterance);
+        }
       }
       await this.alert();
     } else {
