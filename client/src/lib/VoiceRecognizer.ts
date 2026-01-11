@@ -12,19 +12,17 @@ export class VoiceRecognizer {
 
     this.recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
-      if (transcript) {
-        console.log("Voice command recognized:", transcript);
-        this.callback(transcript);
-      }
+      if (transcript) this.callback(transcript);
     };
 
     this.recognition.onerror = (err: any) => {
       console.error("Voice recognition error:", err);
-      this.start(); // automatically restart recognition
+      // Safe auto-restart after short delay to avoid crash loops
+      setTimeout(() => this.start(), 500);
     };
 
     this.recognition.onend = () => {
-      // Auto-restart if recognition stops naturally
+      // Ensure continuous listening
       setTimeout(() => this.start(), 200);
     };
   }
@@ -34,7 +32,7 @@ export class VoiceRecognizer {
       this.recognition.start();
       console.log("Voice recognition started");
     } catch (e) {
-      // Already started
+      // Already started or error
     }
   }
 
@@ -43,7 +41,7 @@ export class VoiceRecognizer {
       this.recognition.stop();
       console.log("Voice recognition stopped");
     } catch (e) {
-      // Already stopped
+      // Already stopped or error
     }
   }
 }
