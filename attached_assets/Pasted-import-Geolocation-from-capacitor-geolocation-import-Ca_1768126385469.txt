@@ -1,0 +1,117 @@
+import { Geolocation } from "@capacitor/geolocation";
+import { Camera, CameraResultType } from "@capacitor/camera";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { createJob, updateJobStatus } from "./api";
+import { handleAICommand } from "./aiGlass";
+
+/**
+ * Unified Voice + AI + Smart Glasses module
+ * Works on Web (PWA), iOS, Android, and smart glasses via mobile companion
+ */
+export class SmartGlassesVoice {
+  private recognition: any;
+
+  constructor() {
+    // Initialize Web Speech API if available
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = true;  // Keep listening
+      this.recognition.interimResults = false;
+      this.recognition.lang = "en-US";
+
+      this.recognition.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim();
+        if (transcript) {
+          console.log("Voice command recognized:", transcript);
+          this.processCommand(transcript);
+        }
+      };
+
+      this.recognition.onerror = (err: any) => {
+        console.error("Voice recognition error:", err);
+        // Auto-restart if stopped unexpectedly
+        this.start();
+      };
+
+      this.recognition.onend = () => {
+        // Ensure continuous listening
+        this.start();
+      };
+    }
+  }
+
+  /** Start listening */
+  start() {
+    if (this.recognition) this.recognition.start();
+    console.log("Smart Glasses Voice Listening Started");
+  }
+
+  /** Stop listening */
+  stop() {
+    if (this.recognition) this.recognition.stop();
+    console.log("Smart Glasses Voice Listening Stopped");
+  }
+
+  /** Core command processor */
+  private async processCommand(command: string) {
+    command = command.toLowerCase();
+
+    // 1️⃣ AI parsing / augmentation
+    const aiResult = await handleAICommand(command);
+
+    // 2️⃣ Predefined commands
+    if (command.includes("mark job complete")) {
+      await updateJobStatus(aiResult.jobId, "completed");
+      await this.alert();
+      console.log("Job marked complete via Smart Glasses.");
+    } else if (command.includes("take photo")) {
+      const photoUri = await this.takePhoto();
+      console.log("Photo captured:", photoUri);
+      await this.alert();
+    } else if (command.includes("current location")) {
+      const location = await this.getLocation();
+      console.log("Contractor location:", location);
+      await this.alert();
+    } else {
+      // Default AI handling
+      console.log("AI command processed:", aiResult.text);
+      await this.alert();
+    }
+  }
+
+  /** Get GPS location */
+  private async getLocation() {
+    try {
+      const pos = await Geolocation.getCurrentPosition();
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (err) {
+      console.error("Location error:", err);
+      return null;
+    }
+  }
+
+  /** Capture photo via camera */
+  private async takePhoto() {
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Uri,
+        quality: 80
+      });
+      return photo.webPath;
+    } catch (err) {
+      console.error("Camera error:", err);
+      return null;
+    }
+  }
+
+  /** Haptic alert feedback */
+  private async alert() {
+    try {
+      await Haptics.impact({ style: ImpactStyle.Medium });
+    } catch (err) {
+      console.warn("Haptics not supported:", err);
+    }
+  }
+}

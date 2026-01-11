@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { VoiceControl } from "../lib/voice";
-import { handleVoiceCommand } from "../lib/aiGlass";
+import { SmartGlassesVoice } from "../lib/SmartGlassesVoice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mic, MicOff, Camera, MapPin, CheckCircle } from "lucide-react";
@@ -9,19 +8,17 @@ export function GlassInterface() {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    let vc: VoiceControl | null = null;
+    let gv: SmartGlassesVoice | null = null;
     try {
-      vc = new VoiceControl((cmd) => {
-        handleVoiceCommand(cmd);
-      });
-      vc.start();
+      gv = new SmartGlassesVoice();
+      gv.start();
       setIsListening(true);
     } catch (e) {
-      console.error("Failed to start voice control:", e);
+      console.error("Failed to start smart glasses voice:", e);
     }
 
     return () => {
-      if (vc) vc.stop();
+      if (gv) gv.stop();
     };
   }, []);
 
