@@ -14,6 +14,7 @@ import Download from "@/pages/Download";
 import Signup from "@/pages/Signup";
 import Login from "@/pages/Login";
 import AboutFounder from "@/pages/AboutFounder";
+import Architecture from "@/pages/Architecture";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 import WelcomeSplash from "@/components/WelcomeSplash";
@@ -31,6 +32,7 @@ function Router() {
         <Route path="/signup" component={Signup} />
         <Route path="/login" component={Login} />
         <Route path="/about-founder" component={AboutFounder} />
+        <Route path="/architecture" component={Architecture} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>
