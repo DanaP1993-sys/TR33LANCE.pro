@@ -1,13 +1,46 @@
 import { SmartGlasses } from "./glasses";
 import { apiRequest } from "./queryClient";
 
+/**
+ * Sends the command to backend AI for interpretation
+ */
+export async function handleAICommand(command: string) {
+  const res = await apiRequest("POST", "/api/ai/chat", {
+    messages: [
+      {
+        role: "system",
+        content: "You are a tree service pricing AI. Analyze tree service job descriptions and provide estimates. Return JSON with: title (short job title), estimatedPrice (number in USD), riskLevel (low/medium/high), estimatedHours (number), requiredEquipment (array of strings), jobId (if applicable)."
+      },
+      {
+        role: "user",
+        content: command
+      }
+    ]
+  });
+  
+  const response = await res.json();
+  
+  // Extract content from OpenAI format
+  const content = response.choices[0]?.message?.content;
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    return { text: content };
+  }
+}
+
 export async function handleVoiceCommand(command: string) {
   const cmd = command.toLowerCase();
   console.log(`[VOICE-COMMAND] ${cmd}`);
 
+  // Get AI interpretation
+  const aiResult = await handleAICommand(cmd);
+
   if (cmd.includes("mark job complete")) {
-    // Note: In a real app, we'd need the specific jobId context
     console.log("Processing 'mark job complete'...");
+    if (aiResult.jobId) {
+      await apiRequest("PATCH", `/api/jobs/${aiResult.jobId}/status`, { status: "completed" });
+    }
     await SmartGlasses.alert();
   }
 
@@ -31,6 +64,7 @@ export async function handleVoiceCommand(command: string) {
         gpsLat: location.lat,
         gpsLng: location.lng
       });
+      await SmartGlasses.alert();
     }
   }
 }

@@ -2,7 +2,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import { Camera, CameraResultType } from "@capacitor/camera";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { apiRequest } from "./queryClient";
-import { handleVoiceCommand as handleAICommand } from "./aiGlass";
+import { handleAICommand } from "./aiGlass";
 
 /**
  * Unified Voice + AI + Smart Glasses module
@@ -83,15 +83,33 @@ export class SmartGlassesVoice {
     command = command.toLowerCase();
 
     // 1️⃣ AI parsing / augmentation
-    // Note: handleAICommand from aiGlass.ts already performs side effects
-    await handleAICommand(command);
+    const aiResult = await handleAICommand(command);
 
-    // 2️⃣ Specialized handling for specific commands if needed beyond handleAICommand
+    // 2️⃣ Predefined commands
     if (command.includes("mark job complete")) {
+      if (aiResult.jobId) {
+        await apiRequest("PATCH", `/api/jobs/${aiResult.jobId}/status`, { status: "completed" });
+      }
       await this.alert();
+      console.log("Job marked complete via Smart Glasses.");
     } else if (command.includes("take photo")) {
+      const photoUri = await this.takePhoto();
+      console.log("Photo captured:", photoUri);
       await this.alert();
     } else if (command.includes("current location")) {
+      const location = await this.getLocation();
+      if (location) {
+        console.log("Contractor location:", location);
+        await apiRequest("POST", "/api/ar/telemetry", {
+          deviceType: "mobile_ar",
+          gpsLat: location.lat,
+          gpsLng: location.lng
+        });
+      }
+      await this.alert();
+    } else {
+      // Default AI handling
+      console.log("AI command processed:", aiResult.text || aiResult.title);
       await this.alert();
     }
   }
