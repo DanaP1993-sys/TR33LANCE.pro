@@ -386,6 +386,20 @@ export class DatabaseStorage implements IStorage {
     const [newEstimate] = await db.insert(aiEstimates).values(estimate).returning();
     return newEstimate;
   }
+
+  // AR Telemetry
+  async getLatestArTelemetry(contractorId: string): Promise<ArTelemetry | undefined> {
+    const [latest] = await db.select().from(arTelemetry)
+      .where(eq(arTelemetry.contractorId, contractorId))
+      .orderBy(desc(arTelemetry.timestamp))
+      .limit(1);
+    return latest;
+  }
+
+  async createArTelemetry(telemetry: InsertArTelemetry): Promise<ArTelemetry> {
+    const [newTelemetry] = await db.insert(arTelemetry).values(telemetry).returning();
+    return newTelemetry;
+  }
 }
 
 export const storage = new DatabaseStorage();

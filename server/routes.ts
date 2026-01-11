@@ -1,7 +1,8 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema, insertDroneSurveySchema, insertTreeSensorSchema, insertSensorReadingSchema, insertJobPhotoSchema, insertContractorVerificationSchema, insertAiEstimateSchema } from "@shared/schema";
+import { insertJobSchema, insertContractorSchema, insertDisputeSchema, insertNotificationSchema, insertDirectMessageSchema, insertDroneSurveySchema, insertTreeSensorSchema, insertSensorReadingSchema, insertJobPhotoSchema, insertContractorVerificationSchema, insertAiEstimateSchema, insertArTelemetrySchema } from "@shared/schema";
+// ... (rest of imports)
 import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -669,6 +670,42 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Job analysis error:", error.message);
       res.status(500).json({ error: "Failed to analyze job" });
+    }
+  });
+
+  // AR Telemetry API
+  app.get("/api/ar/telemetry/:contractorId", requireAuth(), async (req, res) => {
+    try {
+      const telemetry = await storage.getLatestArTelemetry(req.params.contractorId);
+      if (!telemetry) {
+        return res.status(404).json({ error: "No telemetry found" });
+      }
+      res.json(telemetry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch telemetry" });
+    }
+  });
+
+  app.post("/api/ar/telemetry", requireAuth("contractor"), async (req: any, res) => {
+    try {
+      const parsed = insertArTelemetrySchema.safeParse({
+        ...req.body,
+        contractorId: req.user.id
+      });
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors });
+      }
+      const telemetry = await storage.createArTelemetry(parsed.data);
+      
+      // Broadcast to WebSocket for live HUD updates
+      broadcastToUser(req.user.id, { 
+        type: 'ar_telemetry_update', 
+        telemetry 
+      });
+
+      res.status(201).json(telemetry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record telemetry" });
     }
   });
 

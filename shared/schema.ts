@@ -356,3 +356,34 @@ export const insertAiEstimateSchema = createInsertSchema(aiEstimates, {
 
 export type InsertAiEstimate = InferInsertModel<typeof aiEstimates>;
 export type AiEstimate = InferSelectModel<typeof aiEstimates>;
+
+// AR Telemetry table for Smart Glasses data
+export const arTelemetry = pgTable("ar_telemetry", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  contractorId: varchar("contractor_id").notNull(),
+  jobId: integer("job_id"),
+  deviceType: text("device_type").notNull(), // 'hololens', 'nreal', 'mobile_ar'
+  batteryLevel: real("battery_level"),
+  gpsLat: real("gps_lat"),
+  gpsLng: real("gps_lng"),
+  heading: real("heading"),
+  pitch: real("pitch"),
+  roll: real("roll"),
+  activeOverlays: text("active_overlays").array(), // e.g. ['hazard_map', 'pruning_guide']
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export const insertArTelemetrySchema = createInsertSchema(arTelemetry, {
+  contractorId: z.string(),
+  jobId: z.number().optional(),
+  deviceType: z.string(),
+  batteryLevel: z.number().optional(),
+  gpsLat: z.number().optional(),
+  gpsLng: z.number().optional(),
+  heading: z.number().optional(),
+  pitch: z.number().optional(),
+  roll: z.number().optional(),
+});
+
+export type InsertArTelemetry = InferInsertModel<typeof arTelemetry>;
+export type ArTelemetry = InferSelectModel<typeof arTelemetry>;
