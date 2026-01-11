@@ -147,4 +147,26 @@ export class SmartGlassesVoice {
       console.warn("Haptics not supported:", err);
     }
   }
+
+  /** Bluetooth Connectivity for External Sensors/Glasses */
+  async connectBluetooth() {
+    if (!navigator.bluetooth) {
+      console.warn("Web Bluetooth API not supported in this browser.");
+      return null;
+    }
+
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['battery_service'] }],
+        optionalServices: ['generic_access']
+      });
+
+      const server = await device.gatt?.connect();
+      console.log(`[BLUETOOTH] Connected to ${device.name}`);
+      return { device, server };
+    } catch (err) {
+      console.error("Bluetooth connection failed:", err);
+      return null;
+    }
+  }
 }

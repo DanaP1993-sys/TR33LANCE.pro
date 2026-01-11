@@ -6,21 +6,31 @@ import { Mic, MicOff, Camera, MapPin, CheckCircle } from "lucide-react";
 
 export function GlassVoiceInterface() {
   const [isListening, setIsListening] = useState(false);
+  const [bluetoothStatus, setBluetoothStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [voiceModule, setVoiceModule] = useState<SmartGlassesVoice | null>(null);
 
   useEffect(() => {
-    const voiceModule = new SmartGlassesVoice();
+    const module = new SmartGlassesVoice();
     try {
-      voiceModule.start();
+      module.start();
       setIsListening(true);
+      setVoiceModule(module);
     } catch (e) {
       console.error("Failed to start smart glasses voice:", e);
     }
 
     return () => {
-      voiceModule.stop();
+      module.stop();
       setIsListening(false);
     };
   }, []);
+
+  const handleBluetoothConnect = async () => {
+    if (!voiceModule) return;
+    setBluetoothStatus("connecting");
+    const connection = await voiceModule.connectBluetooth();
+    setBluetoothStatus(connection ? "connected" : "disconnected");
+  };
 
   return (
     <Card className="bg-zinc-950 border-lime-500/30 text-zinc-100">
@@ -28,9 +38,20 @@ export function GlassVoiceInterface() {
         <CardTitle className="flex items-center gap-2 text-lime-400">
           {isListening ? <Mic className="animate-pulse" /> : <MicOff />}
           AR Smart Glasses Mode
-          <Badge variant="outline" className="border-lime-500/50 text-lime-500 ml-auto">
-            CONNECTED
-          </Badge>
+          <div className="flex gap-2 ml-auto">
+            <Badge 
+              variant="outline" 
+              className={`cursor-pointer transition-colors ${
+                bluetoothStatus === 'connected' ? 'border-blue-500 text-blue-500' : 'border-zinc-700 text-zinc-500'
+              }`}
+              onClick={handleBluetoothConnect}
+            >
+              {bluetoothStatus === 'connected' ? 'BT: ON' : bluetoothStatus === 'connecting' ? 'BT: ...' : 'BT: OFF'}
+            </Badge>
+            <Badge variant="outline" className="border-lime-500/50 text-lime-500">
+              CONNECTED
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
