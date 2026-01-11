@@ -1,3 +1,32 @@
+/**
+ * ---------------------------------------------------------------------
+ *  Tree-Lance: Intelligent On-Demand Tree Services Platform
+ * ---------------------------------------------------------------------
+ *  © 2026 Dana A. Palmer. All Rights Reserved.
+ *
+ *  Unauthorized copying, distribution, or use of this code or intellectual
+ *  property is strictly prohibited.
+ *
+ *  Author / Founder: Dana A. Palmer
+ *
+ *  Bio:
+ *    Dana Palmer is a global innovator transforming the tree services
+ *    industry. She created Tree-Lance, an AI-powered platform that:
+ *      - Streams tree service requests with Uber-style dispatch
+ *      - Ensures instant payments with Cash App-level simplicity
+ *      - Builds social trust with Facebook-style profiles and reviews
+ *      - Integrates AI guidance for contractors and homeowners
+ *
+ *    Through this work, Dana Palmer has positioned herself as a
+ *    changemaker, driving accountability, efficiency, and sustainability
+ *    in outdoor services worldwide.
+ *
+ * ---------------------------------------------------------------------
+ *  File: server/index.ts
+ *  Description: Main entry point for the Tree-Lance server
+ * ---------------------------------------------------------------------
+ */
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -11,6 +40,10 @@ const app = express();
 const httpServer = createServer(app);
 
 setupWebSocket(httpServer);
+
+if (!process.env.DATABASE_URL) {
+  console.warn("Missing critical environment variable: DATABASE_URL");
+}
 
 declare module "http" {
   interface IncomingMessage {
