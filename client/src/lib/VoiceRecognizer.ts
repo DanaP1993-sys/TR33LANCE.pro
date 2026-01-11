@@ -12,7 +12,10 @@ export class VoiceRecognizer {
 
     this.recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
-      if (transcript) this.callback(transcript);
+      if (transcript) {
+        console.log("Voice command recognized:", transcript);
+        this.callback(transcript);
+      }
     };
 
     this.recognition.onerror = (err: any) => {
