@@ -11,8 +11,10 @@ import {
   type JobPhoto, type InsertJobPhoto,
   type ContractorVerification, type InsertContractorVerification,
   type AiEstimate, type InsertAiEstimate,
+  type ArTelemetry, type InsertArTelemetry,
   users, jobs, contractors, disputes, notifications, directMessages,
-  droneSurveys, treeSensors, sensorReadings, jobPhotos, contractorVerifications, aiEstimates
+  droneSurveys, treeSensors, sensorReadings, jobPhotos, contractorVerifications, aiEstimates,
+  arTelemetry
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";

@@ -14,8 +14,9 @@ import path from "path";
 import { estimateJob, estimateFromDescription } from "./aiEstimator";
 import { uploadJobPhoto, validateJobDocumentation, getJobPhotosPath } from "./jobDocs";
 import { verifyContractor, getPayoutRate, getAllTierBenefits } from "./contractorVerification";
-import rateLimit from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import parseForwarded from 'forwarded-parse';
+import arAlertsRouter from "./routes/ar_alerts";
 
 const startTime = Date.now();
 const NUMBER_OF_PROXIES_TO_TRUST = 1;
@@ -61,7 +62,7 @@ export async function registerRoutes(
           ex
         );
       }
-      return ip || req.ip;
+      return ipKeyGenerator(ip || req.ip);
     }
   });
   app.use('/api', limiter);
@@ -558,6 +559,8 @@ export async function registerRoutes(
 
   // Register AI chat routes from integration
   registerChatRoutes(app);
+
+  app.use("/api/ar/alerts", arAlertsRouter);
 
   // Direct Messaging API
   app.get("/api/messages/conversations", requireAuth(), async (req: any, res) => {
