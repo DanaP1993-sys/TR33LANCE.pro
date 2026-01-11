@@ -1,3 +1,32 @@
+/**
+ * ---------------------------------------------------------------------
+ *  Tree-Lance: Intelligent On-Demand Tree Services Platform
+ * ---------------------------------------------------------------------
+ *  © 2026 Dana A. Palmer. All Rights Reserved.
+ *
+ *  Unauthorized copying, distribution, or use of this code or intellectual
+ *  property is strictly prohibited.
+ *
+ *  Author / Founder: Dana A. Palmer
+ *
+ *  Bio:
+ *    Dana Palmer is a global innovator transforming the tree services
+ *    industry. She created Tree-Lance, an AI-powered platform that:
+ *      - Streams tree service requests with Uber-style dispatch
+ *      - Ensures instant payments with Cash App-level simplicity
+ *      - Builds social trust with Facebook-style profiles and reviews
+ *      - Integrates AI guidance for contractors and homeowners
+ *
+ *    Through this work, Dana Palmer has positioned herself as a
+ *    changemaker, driving accountability, efficiency, and sustainability
+ *    in outdoor services worldwide.
+ *
+ * ---------------------------------------------------------------------
+ *  File: shared/schema.ts
+ *  Description: PostgreSQL database schema definition using Drizzle ORM
+ * ---------------------------------------------------------------------
+ */
+
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, integer, real, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
