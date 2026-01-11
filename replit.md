@@ -6,7 +6,7 @@ Full-stack marketplace connecting homeowners with tree service contractors.
 - **Purpose**: Connect homeowners with verified tree service contractors
 - **Stack**: React + TypeScript (frontend), Express.js + PostgreSQL (backend)
 - **Design**: Dark Industrial aesthetic with Rajdhani/Inter fonts, neon green accents
-- **Copyright**: © 2025 Dana Palmer. All Rights Reserved. TREE-LANCE™ Platform
+- **Copyright**: © 2024 Dana A. Palmer. All rights reserved. Unauthorized copying, distribution, or use is strictly prohibited.
 
 ## Architecture Modules
 
