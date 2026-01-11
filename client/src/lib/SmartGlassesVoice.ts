@@ -150,13 +150,14 @@ export class SmartGlassesVoice {
 
   /** Bluetooth Connectivity for External Sensors/Glasses */
   async connectBluetooth() {
-    if (!navigator.bluetooth) {
+    const nav = navigator as any;
+    if (!nav.bluetooth) {
       console.warn("Web Bluetooth API not supported in this browser.");
       return null;
     }
 
     try {
-      const device = await navigator.bluetooth.requestDevice({
+      const device = await nav.bluetooth.requestDevice({
         filters: [{ services: ['battery_service'] }],
         optionalServices: ['generic_access']
       });
