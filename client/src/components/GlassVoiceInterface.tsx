@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SmartGlassesVoice } from "../lib/SmartGlassesVoice";
+import { VoiceRecognizer } from "../lib/VoiceRecognizer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mic, MicOff, Camera, MapPin, CheckCircle, Sparkles } from "lucide-react";
@@ -11,8 +12,14 @@ export function GlassVoiceInterface() {
 
   useEffect(() => {
     const module = new SmartGlassesVoice();
+    const recognizer = new VoiceRecognizer((cmd) => {
+      console.log("Voice command received in HUD:", cmd);
+      // Logic for handling command if needed separately from module
+    });
+
     try {
       module.start();
+      recognizer.start();
       setIsListening(true);
       setVoiceModule(module);
     } catch (e) {
@@ -21,6 +28,7 @@ export function GlassVoiceInterface() {
 
     return () => {
       module.stop();
+      recognizer.stop();
       setIsListening(false);
     };
   }, []);
