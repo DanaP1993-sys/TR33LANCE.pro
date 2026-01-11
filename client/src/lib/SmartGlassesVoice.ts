@@ -17,7 +17,7 @@ export class SmartGlassesVoice {
 
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
-      this.recognition.continuous = true;  // Keep listening
+      this.recognition.continuous = true; // Stay active for hands-free field use
       this.recognition.interimResults = false;
       this.recognition.lang = "en-US";
 
