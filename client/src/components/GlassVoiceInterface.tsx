@@ -8,17 +8,17 @@ export function GlassVoiceInterface() {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    let gv: SmartGlassesVoice | null = null;
+    const voiceModule = new SmartGlassesVoice();
     try {
-      gv = new SmartGlassesVoice();
-      gv.start();
+      voiceModule.start();
       setIsListening(true);
     } catch (e) {
       console.error("Failed to start smart glasses voice:", e);
     }
 
     return () => {
-      if (gv) gv.stop();
+      voiceModule.stop();
+      setIsListening(false);
     };
   }, []);
 
@@ -27,9 +27,9 @@ export function GlassVoiceInterface() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lime-400">
           {isListening ? <Mic className="animate-pulse" /> : <MicOff />}
-          AR Smart Glasses Voice Active
+          AR Smart Glasses Mode
           <Badge variant="outline" className="border-lime-500/50 text-lime-500 ml-auto">
-            MODE: FIELD
+            CONNECTED
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -48,6 +48,9 @@ export function GlassVoiceInterface() {
             <span>"Current location"</span>
           </div>
         </div>
+        <p className="text-xs text-zinc-500 italic text-center">
+          Listening for holographic voice commands...
+        </p>
       </CardContent>
     </Card>
   );
