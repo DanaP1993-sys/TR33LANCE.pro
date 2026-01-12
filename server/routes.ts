@@ -545,6 +545,36 @@ export async function registerRoutes(
     }
   });
 
+  // Mass notification endpoint (Amber Alert style)
+  app.post("/api/notifications/mass-broadcast", async (req, res) => {
+    try {
+      const { message, link } = req.body;
+      const allUsers = await storage.getUsers();
+      
+      const notifications = await Promise.all(allUsers.map((user: any) => 
+        storage.createNotification({
+          userId: user.id,
+          message: `${message} ${link || ''}`.trim(),
+        })
+      ));
+
+      // Broadcast via WebSocket for real-time delivery
+      allUsers.forEach((user: any) => {
+        broadcastToUser(user.id, {
+          type: 'MASS_BROADCAST',
+          message,
+          link,
+          priority: 'high'
+        });
+      });
+
+      res.json({ success: true, count: notifications.length });
+    } catch (error) {
+      console.error("Mass broadcast error:", error);
+      res.status(500).json({ error: "Failed to broadcast notification" });
+    }
+  });
+
   // Notifications API
   app.get("/api/notifications", requireAuth(), async (req: any, res) => {
     try {
