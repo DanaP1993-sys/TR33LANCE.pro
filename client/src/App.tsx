@@ -17,6 +17,7 @@ import AboutFounder from "@/pages/AboutFounder";
 import Architecture from "@/pages/Architecture";
 import Mission from "@/pages/Mission";
 import GlobalLaunch from "@/pages/GlobalLaunch";
+import ARCapture from "@/pages/ar-capture";
 import Layout from "@/components/Layout";
 import { AppProvider } from "@/lib/context";
 import WelcomeSplash from "@/components/WelcomeSplash";
@@ -37,6 +38,7 @@ function Router() {
         <Route path="/architecture" component={Architecture} />
         <Route path="/mission" component={Mission} />
         <Route path="/launch" component={GlobalLaunch} />
+        <Route path="/ar-capture" component={ARCapture} />
         <Route path="/terms" component={Terms} />
         <Route component={NotFound} />
       </Switch>
