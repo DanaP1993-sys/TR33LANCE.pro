@@ -12,9 +12,11 @@ import {
   type ContractorVerification, type InsertContractorVerification,
   type AiEstimate, type InsertAiEstimate,
   type ArTelemetry, type InsertArTelemetry,
+  type DeviceToken, type InsertDeviceToken,
+  type PushAlert, type InsertPushAlert,
   users, jobs, contractors, disputes, notifications, directMessages,
   droneSurveys, treeSensors, sensorReadings, jobPhotos, contractorVerifications, aiEstimates,
-  arTelemetry
+  arTelemetry, deviceTokens, pushAlerts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -86,6 +88,16 @@ export interface IStorage {
   // AI Estimates
   getAiEstimates(jobId: number): Promise<AiEstimate[]>;
   createAiEstimate(estimate: InsertAiEstimate): Promise<AiEstimate>;
+  
+  // Device Tokens (Push Notifications)
+  getAllDeviceTokens(): Promise<DeviceToken[]>;
+  getDeviceToken(token: string): Promise<DeviceToken | undefined>;
+  upsertDeviceToken(tokenData: InsertDeviceToken): Promise<DeviceToken>;
+  deleteDeviceToken(token: string): Promise<boolean>;
+  
+  // Push Alerts
+  getPushAlerts(): Promise<PushAlert[]>;
+  createPushAlert(alert: InsertPushAlert): Promise<PushAlert>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -406,6 +418,49 @@ export class DatabaseStorage implements IStorage {
   async createArTelemetry(telemetry: InsertArTelemetry): Promise<ArTelemetry> {
     const [newTelemetry] = await db.insert(arTelemetry).values(telemetry).returning();
     return newTelemetry;
+  }
+
+  // Device Tokens (Push Notifications)
+  async getAllDeviceTokens(): Promise<DeviceToken[]> {
+    return db.select().from(deviceTokens).orderBy(desc(deviceTokens.createdAt));
+  }
+
+  async getDeviceToken(token: string): Promise<DeviceToken | undefined> {
+    const [result] = await db.select().from(deviceTokens).where(eq(deviceTokens.token, token));
+    return result;
+  }
+
+  async upsertDeviceToken(tokenData: InsertDeviceToken): Promise<DeviceToken> {
+    const existing = await this.getDeviceToken(tokenData.token);
+    if (existing) {
+      const [updated] = await db.update(deviceTokens)
+        .set({ 
+          lastSeen: new Date(),
+          userId: tokenData.userId || existing.userId,
+          platform: tokenData.platform || existing.platform,
+          deviceInfo: tokenData.deviceInfo || existing.deviceInfo
+        })
+        .where(eq(deviceTokens.token, tokenData.token))
+        .returning();
+      return updated;
+    }
+    const [newToken] = await db.insert(deviceTokens).values(tokenData).returning();
+    return newToken;
+  }
+
+  async deleteDeviceToken(token: string): Promise<boolean> {
+    const result = await db.delete(deviceTokens).where(eq(deviceTokens.token, token)).returning();
+    return result.length > 0;
+  }
+
+  // Push Alerts
+  async getPushAlerts(): Promise<PushAlert[]> {
+    return db.select().from(pushAlerts).orderBy(desc(pushAlerts.createdAt)).limit(100);
+  }
+
+  async createPushAlert(alert: InsertPushAlert): Promise<PushAlert> {
+    const [newAlert] = await db.insert(pushAlerts).values(alert).returning();
+    return newAlert;
   }
 }
 

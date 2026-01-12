@@ -160,6 +160,16 @@ Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 - AI Recommendations: POST /api/ai/recommend (hands-free guidance)
 - Contractor Location: POST /api/contractors/:id/location (real-time tracking)
 
+### Push Notifications (Firebase FCM + Web Push)
+- Register Device Token: POST /register-token (iOS, Android, Web)
+- Unregister Device: DELETE /unregister-token
+- Send Launch Alert: POST /send-launch-alert (Amber Alert style)
+- Send Custom Alert: POST /send-alert (title, message, link)
+- Get Registered Devices: GET /api/push/devices (admin)
+- Get Alert History: GET /api/push/alerts
+- Get VAPID Key: GET /api/push/vapid-key (for Web Push)
+- Service Worker: /sw.js (handles push events)
+
 ### Voice Commands (AR Smart Glasses)
 - "What's next?" - Get upcoming task info with audio response
 - "Mark job complete" - Complete current job
@@ -167,6 +177,11 @@ Backend ready: JWT auth, real-time API, AI integration, GPS coordinates
 - "Current location" - Report GPS coordinates
 
 ## Recent Changes
+- 2026-01-12: Added Firebase FCM push notification system with Amber Alert broadcasts
+- 2026-01-12: Added device_tokens and push_alerts tables for persistent storage
+- 2026-01-12: Added /register-token, /send-launch-alert, /send-alert endpoints
+- 2026-01-12: Added Web Push service worker (sw.js) for browser notifications
+- 2026-01-12: Added treelance-alert standalone service with admin panel
 - 2026-01-11: Added holographic Welcome Splash screen with "Welcome to Tree-Lance" messaging
 - 2026-01-11: Added Download App page with iOS/Android/Web links for customers and contractors
 - 2026-01-11: Added "What's next?" voice command for contextual task guidance

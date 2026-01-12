@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree-Lance Alert Center</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .header {
+      background: linear-gradient(90deg, #ff4444, #cc0000);
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(255, 68, 68, 0.3);
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    }
+    
+    .header .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .card {
+      background: rgba(30, 30, 50, 0.8);
+      border-radius: 16px;
+      padding: 25px;
+      border: 1px solid rgba(0, 255, 127, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .card h2 {
+      color: #00ff7f;
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #aaa;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 127, 0.3);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #00ff7f;
+      box-shadow: 0 0 15px rgba(0, 255, 127, 0.2);
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .btn-alert {
+      background: linear-gradient(135deg, #ff4444, #cc0000);
+      color: white;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(255, 68, 68, 0.4);
+    }
+    
+    .btn-alert:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(255, 68, 68, 0.6);
+    }
+    
+    .btn-alert:active {
+      transform: translateY(0);
+    }
+    
+    .btn-alert:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .status-panel {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .status-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .status-item .value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00ff7f;
+    }
+    
+    .status-item .label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 5px;
+    }
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .status-indicator.online {
+      background: rgba(0, 255, 127, 0.2);
+      color: #00ff7f;
+    }
+    
+    .status-indicator.demo {
+      background: rgba(255, 200, 0, 0.2);
+      color: #ffc800;
+    }
+    
+    .status-indicator .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-indicator.online .dot {
+      background: #00ff7f;
+    }
+    
+    .status-indicator.demo .dot {
+      background: #ffc800;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .history-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .history-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border-left: 4px solid #00ff7f;
+    }
+    
+    .history-item.failed {
+      border-left-color: #ff4444;
+    }
+    
+    .history-item .title {
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    
+    .history-item .body {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+    
+    .history-item .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    .preview-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 20px;
+      border: 2px dashed rgba(0, 255, 127, 0.3);
+    }
+    
+    .preview-card h3 {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .phone-preview {
+      background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+      border-radius: 20px;
+      padding: 20px;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    
+    .notification-preview {
+      background: rgba(255, 68, 68, 0.15);
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    
+    .notification-preview .app-icon {
+      width: 24px;
+      height: 24px;
+      background: #00ff7f;
+      border-radius: 6px;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    
+    .notification-preview .app-name {
+      font-size: 0.75rem;
+      color: #888;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    
+    .notification-preview .preview-title {
+      font-weight: 600;
+      margin: 8px 0 4px;
+      color: #fff;
+    }
+    
+    .notification-preview .preview-body {
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    
+    .templates {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    
+    .template-btn {
+      padding: 8px 16px;
+      background: rgba(0, 255, 127, 0.1);
+      border: 1px solid rgba(0, 255, 127, 0.3);
+      border-radius: 20px;
+      color: #00ff7f;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .template-btn:hover {
+      background: rgba(0, 255, 127, 0.2);
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      padding: 15px 25px;
+      border-radius: 10px;
+      color: white;
+      font-weight: 500;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .toast.success {
+      background: linear-gradient(135deg, #00c853, #00a040);
+    }
+    
+    .toast.error {
+      background: linear-gradient(135deg, #ff4444, #cc0000);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚨 Tree-Lance Alert Center</h1>
+    <p class="subtitle">Emergency Broadcast System for Push Notifications</p>
+  </div>
+  
+  <div class="container">
+    <div class="card">
+      <h2>📡 Send Mass Broadcast</h2>
+      
+      <div class="templates">
+        <button class="template-btn" onclick="loadTemplate('launch')">🚀 Launch</button>
+        <button class="template-btn" onclick="loadTemplate('urgent')">⚠️ Urgent</button>
+        <button class="template-btn" onclick="loadTemplate('promo')">🎁 Promo</button>
+        <button class="template-btn" onclick="loadTemplate('weather')">🌪️ Weather</button>
+      </div>
+      
+      <form id="broadcastForm">
+        <div class="form-group">
+          <label>Alert Title</label>
+          <input type="text" id="title" placeholder="🚨 TREE-LANCE GLOBAL LAUNCH" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Message Body</label>
+          <textarea id="body" placeholder="Download now from the App Store! Revolutionary tree service at your fingertips." required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="priority">
+            <option value="high">High (Immediate delivery)</option>
+            <option value="normal">Normal</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Deep Link URL (optional)</label>
+          <input type="text" id="deepLink" placeholder="treelance://download">
+        </div>
+        
+        <button type="submit" class="btn btn-alert" id="sendBtn">
+          🔔 BROADCAST TO ALL DEVICES
+        </button>
+      </form>
+      
+      <div class="preview-card">
+        <h3>📱 Notification Preview</h3>
+        <div class="phone-preview">
+          <div class="notification-preview">
+            <span class="app-icon"></span>
+            <span class="app-name">Tree-Lance</span>
+            <div class="preview-title" id="previewTitle">Alert Title</div>
+            <div class="preview-body" id="previewBody">Message body will appear here...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div>
+      <div class="card" style="margin-bottom: 30px;">
+        <h2>📊 System Status</h2>
+        
+        <div style="margin-bottom: 20px;">
+          <span class="status-indicator online" id="firebaseStatus">
+            <span class="dot"></span>
+            <span id="firebaseText">Checking...</span>
+          </span>
+        </div>
+        
+        <div class="status-panel">
+          <div class="status-item">
+            <div class="value" id="deviceCount">0</div>
+            <div class="label">Registered Devices</div>
+          </div>
+          <div class="status-item">
+            <div class="value" id="broadcastCount">0</div>
+            <div class="label">Broadcasts Sent</div>
+          </div>
+          <div class="status-item">
+            <div class="value" id="uptime">0m</div>
+            <div class="label">Uptime</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>📜 Broadcast History</h2>
+        <div class="history-list" id="historyList">
+          <p style="color: #666; text-align: center; padding: 20px;">No broadcasts yet</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+  
+  <script>
+    const API_BASE = '';
+    
+    const templates = {
+      launch: {
+        title: '🚀 TREE-LANCE IS LIVE!',
+        body: 'The future of tree service is here! Download now from the App Store and get $50 off your first job. Limited time offer!'
+      },
+      urgent: {
+        title: '⚠️ URGENT: Storm Alert',
+        body: 'Severe weather incoming! Emergency tree removal crews on standby. Book priority service now before slots fill up.'
+      },
+      promo: {
+        title: '🎁 FLASH SALE: 30% OFF',
+        body: 'For the next 24 hours only! Use code TREESALE30 for 30% off any tree service. Don\'t miss out!'
+      },
+      weather: {
+        title: '🌪️ POST-STORM CLEANUP',
+        body: 'Storm damage? Our verified contractors are ready to help. Get instant quotes and same-day service available.'
+      }
+    };
+    
+    function loadTemplate(type) {
+      const template = templates[type];
+      document.getElementById('title').value = template.title;
+      document.getElementById('body').value = template.body;
+      updatePreview();
+    }
+    
+    function updatePreview() {
+      const title = document.getElementById('title').value || 'Alert Title';
+      const body = document.getElementById('body').value || 'Message body will appear here...';
+      document.getElementById('previewTitle').textContent = title;
+      document.getElementById('previewBody').textContent = body;
+    }
+    
+    document.getElementById('title').addEventListener('input', updatePreview);
+    document.getElementById('body').addEventListener('input', updatePreview);
+    
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+    
+    async function fetchStatus() {
+      try {
+        const [health, history] = await Promise.all([
+          fetch(`${API_BASE}/api/health`).then(r => r.json()),
+          fetch(`${API_BASE}/api/broadcast-history`).then(r => r.json())
+        ]);
+        
+        document.getElementById('deviceCount').textContent = health.registeredDevices;
+        document.getElementById('broadcastCount').textContent = health.broadcastsSent;
+        document.getElementById('uptime').textContent = Math.floor(health.uptime / 60) + 'm';
+        
+        const statusEl = document.getElementById('firebaseStatus');
+        const textEl = document.getElementById('firebaseText');
+        if (health.firebaseEnabled) {
+          statusEl.className = 'status-indicator online';
+          textEl.textContent = 'Firebase Connected';
+        } else {
+          statusEl.className = 'status-indicator demo';
+          textEl.textContent = 'Demo Mode';
+        }
+        
+        renderHistory(history.broadcasts);
+      } catch (error) {
+        console.error('Status fetch error:', error);
+      }
+    }
+    
+    function renderHistory(broadcasts) {
+      const list = document.getElementById('historyList');
+      if (broadcasts.length === 0) {
+        list.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No broadcasts yet</p>';
+        return;
+      }
+      
+      list.innerHTML = broadcasts.map(b => `
+        <div class="history-item ${b.status === 'failed' ? 'failed' : ''}">
+          <div class="title">${b.title}</div>
+          <div class="body">${b.body}</div>
+          <div class="meta">
+            <span>${b.recipientCount} recipients</span>
+            <span>${new Date(b.sentAt).toLocaleString()}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ SENDING...';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/broadcast`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: document.getElementById('title').value,
+            body: document.getElementById('body').value,
+            priority: document.getElementById('priority').value,
+            data: {
+              deepLink: document.getElementById('deepLink').value || undefined
+            }
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          showToast(`✅ Broadcast sent to ${result.broadcast.recipientCount} devices!`, 'success');
+          fetchStatus();
+        } else {
+          showToast(`❌ ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showToast(`❌ Failed to send broadcast`, 'error');
+      }
+      
+      btn.disabled = false;
+      btn.textContent = '🔔 BROADCAST TO ALL DEVICES';
+    });
+    
+    fetchStatus();
+    setInterval(fetchStatus, 10000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const admin = require('firebase-admin');
+const cors = require('cors');
+const { MongoClient } = require('mongodb');
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
+
+// Firebase Admin
+const serviceAccount = require('./firebase-service-account.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// MongoDB
+const client = new MongoClient(process.env.MONGO_URI);
+let tokensCollection;
+
+client.connect().then(() => {
+  const db = client.db('TreeLanceDB');
+  tokensCollection = db.collection('device_tokens');
+  console.log('MongoDB connected');
+});
+
+// Register device token
+app.post('/register-token', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).send('Token required');
+  await tokensCollection.updateOne({ token }, { $set: { token } }, { upsert: true });
+  res.send('Token registered');
+});
+
+// Send Amber Alert-style launch push
+app.post('/send-launch-alert', async (req, res) => {
+  const title = "🚨 Tree-Lance Launch Alert!";
+  const message = "The world’s most powerful tree service app is live now. Tap to join the revolution!";
+  const link = "https://tr33lance.pro";
+
+  try {
+    const deviceTokens = await tokensCollection.find({}).toArray();
+    const tokens = deviceTokens.map(t => t.token);
+
+    if (tokens.length === 0) return res.status(400).send('No devices registered');
+
+    const payload = {
+      notification: { title, body: message, click_action: link },
+      android: { priority: 'high', notification: { sound: 'default', click_action: 'FLUTTER_NOTIFICATION_CLICK' } },
+      apns: { payload: { aps: { alert: { title, body: message }, sound: 'default' } } },
+    };
+
+    // Batch sending 500 devices at a time
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+      const batchTokens = tokens.slice(i, i + BATCH_SIZE);
+      await admin.messaging().sendToDevice(batchTokens, payload);
+    }
+
+    res.send({ message: 'Launch alert sent successfully!', totalDevices: tokens.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error sending launch alert');
+  }
+});
+
+app.listen(5000, () => console.log('Server running on port 5000'));

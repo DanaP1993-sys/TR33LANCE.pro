@@ -36,7 +36,7 @@ import { hashPassword, comparePassword, createToken } from "./auth";
 import { requireAuth } from "./middleware/auth";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { registerChatRoutes } from "./replit_integrations/chat";
-import { broadcastJobUpdate, broadcastToUser } from "./websocket";
+import { broadcastJobUpdate, broadcastToUser, broadcastAll as broadcastToAll } from "./websocket";
 import OpenAI from "openai";
 import multer from "multer";
 import path from "path";
@@ -1473,6 +1473,192 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("AI recommendation error:", error.message);
       res.status(500).json({ error: "Recommendation failed" });
+    }
+  });
+
+  // ============================================
+  // PUSH NOTIFICATION ENDPOINTS (Firebase FCM)
+  // ============================================
+
+  // Register device token for push notifications
+  app.post("/register-token", async (req, res) => {
+    try {
+      const { token, userId, platform, deviceInfo } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Token required" });
+      }
+
+      // Upsert the device token
+      await storage.upsertDeviceToken({
+        token,
+        userId: userId || null,
+        platform: platform || "unknown",
+        deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
+      });
+
+      console.log(`Device registered: ${token.substring(0, 20)}...`);
+      res.json({ success: true, message: "Token registered successfully" });
+    } catch (error: any) {
+      console.error("Token registration error:", error.message);
+      res.status(500).json({ error: "Error registering token" });
+    }
+  });
+
+  // Unregister device token
+  app.delete("/unregister-token", async (req, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: "Token required" });
+      }
+
+      await storage.deleteDeviceToken(token);
+      res.json({ success: true, message: "Token removed" });
+    } catch (error: any) {
+      console.error("Token unregister error:", error.message);
+      res.status(500).json({ error: "Error removing token" });
+    }
+  });
+
+  // Get registered devices (admin only)
+  app.get("/api/push/devices", requireAuth, async (req, res) => {
+    try {
+      const devices = await storage.getAllDeviceTokens();
+      res.json({
+        count: devices.length,
+        devices: devices.map(d => ({
+          ...d,
+          token: d.token.substring(0, 20) + "..."
+        }))
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Error fetching devices" });
+    }
+  });
+
+  // Send launch alert (Amber Alert style)
+  app.post("/send-launch-alert", async (req, res) => {
+    const title = "🚨 Tree-Lance Launch Alert!";
+    const message = "The world's most powerful tree service app is live now. Tap to join the revolution!";
+    const link = "https://tr33lance.pro";
+
+    try {
+      const deviceTokens = await storage.getAllDeviceTokens();
+      const tokens = deviceTokens.map(d => d.token);
+
+      if (tokens.length === 0) {
+        return res.status(400).json({ error: "No devices registered" });
+      }
+
+      // Log the alert
+      const alert = await storage.createPushAlert({
+        title,
+        message,
+        link,
+        sentTo: tokens.length,
+        status: "simulated", // Will be 'sent' when Firebase is configured
+      });
+
+      console.log("\n" + "=".repeat(50));
+      console.log("🚨 LAUNCH ALERT BROADCAST 🚨");
+      console.log("=".repeat(50));
+      console.log(`TITLE: ${title}`);
+      console.log(`MESSAGE: ${message}`);
+      console.log(`RECIPIENTS: ${tokens.length} devices`);
+      console.log("=".repeat(50) + "\n");
+
+      // Broadcast via WebSocket to all connected clients
+      broadcastToAll({
+        type: "LAUNCH_ALERT",
+        title,
+        message,
+        link,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({ 
+        success: true,
+        message: "Launch alert sent successfully!",
+        totalDevices: tokens.length,
+        alert
+      });
+    } catch (error: any) {
+      console.error("Launch alert error:", error.message);
+      res.status(500).json({ error: "Error sending launch alert" });
+    }
+  });
+
+  // Send custom alert
+  app.post("/send-alert", async (req, res) => {
+    try {
+      const { title, message, link } = req.body;
+
+      if (!title || !message) {
+        return res.status(400).json({ error: "Title and message required" });
+      }
+
+      const deviceTokens = await storage.getAllDeviceTokens();
+      const tokens = deviceTokens.map(d => d.token);
+
+      if (tokens.length === 0) {
+        return res.status(400).json({ error: "No devices registered" });
+      }
+
+      const alert = await storage.createPushAlert({
+        title,
+        message,
+        link: link || "https://tr33lance.pro",
+        sentTo: tokens.length,
+        status: "simulated",
+      });
+
+      console.log("\n" + "=".repeat(50));
+      console.log("🚨 GLOBAL ALERT BROADCAST 🚨");
+      console.log("=".repeat(50));
+      console.log(`TITLE: ${title}`);
+      console.log(`MESSAGE: ${message}`);
+      console.log(`RECIPIENTS: ${tokens.length} devices`);
+      console.log("=".repeat(50) + "\n");
+
+      // Broadcast via WebSocket
+      broadcastToAll({
+        type: "PUSH_ALERT",
+        title,
+        message,
+        link: link || "https://tr33lance.pro",
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({
+        success: true,
+        message: "Global alert sent successfully!",
+        totalDevices: tokens.length,
+        alert
+      });
+    } catch (error: any) {
+      console.error("Send alert error:", error.message);
+      res.status(500).json({ error: "Error sending alert" });
+    }
+  });
+
+  // Get VAPID public key for Web Push
+  app.get("/api/push/vapid-key", (req, res) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY || null;
+    res.json({ 
+      publicKey,
+      configured: !!publicKey
+    });
+  });
+
+  // Get alert history
+  app.get("/api/push/alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getPushAlerts();
+      res.json({ alerts, total: alerts.length });
+    } catch (error: any) {
+      res.status(500).json({ error: "Error fetching alerts" });
     }
   });
 

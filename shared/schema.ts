@@ -416,3 +416,50 @@ export const insertArTelemetrySchema = createInsertSchema(arTelemetry, {
 
 export type InsertArTelemetry = InferInsertModel<typeof arTelemetry>;
 export type ArTelemetry = InferSelectModel<typeof arTelemetry>;
+
+// Device Tokens table for Firebase push notifications
+export const deviceTokens = pgTable("device_tokens", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  token: text("token").notNull().unique(),
+  userId: varchar("user_id"),
+  platform: text("platform").notNull().default("unknown"), // 'ios', 'android', 'web'
+  deviceInfo: text("device_info"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastSeen: timestamp("last_seen").notNull().defaultNow(),
+});
+
+export const insertDeviceTokenSchema = createInsertSchema(deviceTokens, {
+  token: z.string(),
+  userId: z.string().optional(),
+  platform: z.string().optional(),
+  deviceInfo: z.string().optional(),
+});
+
+export type InsertDeviceToken = InferInsertModel<typeof deviceTokens>;
+export type DeviceToken = InferSelectModel<typeof deviceTokens>;
+
+// Push Alerts table for broadcast history
+export const pushAlerts = pgTable("push_alerts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"),
+  sentTo: integer("sent_to").notNull().default(0),
+  successCount: integer("success_count").default(0),
+  failureCount: integer("failure_count").default(0),
+  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'failed', 'simulated'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPushAlertSchema = createInsertSchema(pushAlerts, {
+  title: z.string(),
+  message: z.string(),
+  link: z.string().optional(),
+  sentTo: z.number().optional(),
+  successCount: z.number().optional(),
+  failureCount: z.number().optional(),
+  status: z.string().optional(),
+});
+
+export type InsertPushAlert = InferInsertModel<typeof pushAlerts>;
+export type PushAlert = InferSelectModel<typeof pushAlerts>;

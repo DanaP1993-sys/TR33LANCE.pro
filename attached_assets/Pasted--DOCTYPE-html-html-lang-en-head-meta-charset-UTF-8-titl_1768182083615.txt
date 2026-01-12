@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tree-Lance Launch Control</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    h1 { color: #006400; }
+    button {
+      padding: 30px 60px;
+      font-size: 24px;
+      color: white;
+      background-color: #d60000;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background-color: #ff0000; transform: scale(1.05); }
+    input { padding: 10px; width: 300px; margin: 10px 0; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Tree-Lance Launch Control</h1>
+  <input id="adminPassword" type="password" placeholder="Admin Password" />
+  <br/>
+  <button id="launchButton">🚨 LAUNCH NOW 🚨</button>
+
+  <script>
+    const launchButton = document.getElementById('launchButton');
+
+    launchButton.addEventListener('click', async () => {
+      const password = document.getElementById('adminPassword').value;
+      if (!password) return alert('Enter admin password!');
+
+      try {
+        // 1️⃣ Login to get JWT
+        const loginRes = await fetch('https://tr33lance.pro/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        const loginData = await loginRes.json();
+        if (!loginData.token) return alert('Invalid password!');
+        const token = loginData.token;
+
+        // 2️⃣ Send Launch Alert
+        const alertRes = await fetch('https://tr33lance.pro/send-launch-alert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        const alertData = await alertRes.json();
+        alert(`🚀 Launch alert sent! Total devices: ${alertData.totalDevices}`);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to send launch alert!');
+      }
+    });
+  </script>
+</body>
+</html>
