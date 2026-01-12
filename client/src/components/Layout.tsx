@@ -58,7 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="mt-8 md:mt-0 p-4 rounded-lg bg-card/50 border border-border text-xs text-muted-foreground">
-          <p>© 2026 Tree-Lance Inc.</p>
+          <p>© 2026 Dana A. Palmer. All Rights Reserved. tr33lance.pro</p>
           <p className="mt-1">Houston, TX</p>
         </div>
       </div>

@@ -70,7 +70,19 @@ export class VoiceRecognizer {
       this.recognition.stop();
       console.log("Voice recognition stopped");
     } catch (e) {
-      // Already stopped or error
-    }
+      // Already stopped or 
+		// handle error when stopping voice recognition
+		console.error("Error stopping voice recognition:", e);
+      fix
+
+     // Ensure continuous listening
+      setTimeout(() => this.start(), 200);
+       }
   }
 }
+console.log("VoiceRecognizer class loaded");
+console.log("VoiceRecognizer class loaded");
+console.log("VoiceRecognizer class loaded");
+console.log("VoiceRecognizer class loaded");
+run
+console.log("VoiceRecognizer class loaded");

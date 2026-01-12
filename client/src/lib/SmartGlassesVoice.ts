@@ -228,3 +228,6 @@ export class SmartGlassesVoice {
     }
   }
 }
+run
+console.log("SmartGlassesVoice class loaded");
+console.log("SmartGlassesVoice class loaded");
