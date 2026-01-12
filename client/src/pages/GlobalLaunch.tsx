@@ -83,7 +83,7 @@ export default function GlobalLaunch() {
                     Tree-Lance is live worldwide.
                   </p>
                   <p className="text-xl md:text-2xl mt-2 text-foreground font-display font-bold">
-                    Join the revolution.
+                    Now available on the App Store!
                   </p>
                 </div>
               </div>
