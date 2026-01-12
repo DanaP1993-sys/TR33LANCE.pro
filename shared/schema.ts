@@ -463,3 +463,37 @@ export const insertPushAlertSchema = createInsertSchema(pushAlerts, {
 
 export type InsertPushAlert = InferInsertModel<typeof pushAlerts>;
 export type PushAlert = InferSelectModel<typeof pushAlerts>;
+
+// Quick Captures table for AR glasses photo/video capture
+export const quickCaptures = pgTable("quick_captures", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  contractorId: varchar("contractor_id").notNull(),
+  jobId: integer("job_id"),
+  type: text("type").notNull().default("photo"), // 'photo', 'video'
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  duration: real("duration"), // for videos, in seconds
+  voiceCommand: text("voice_command"), // the command that triggered capture
+  gpsLat: real("gps_lat"),
+  gpsLng: real("gps_lng"),
+  deviceType: text("device_type").default("mobile_ar"), // 'hololens', 'nreal', 'mobile_ar'
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertQuickCaptureSchema = createInsertSchema(quickCaptures, {
+  contractorId: z.string(),
+  jobId: z.number().optional(),
+  type: z.enum(["photo", "video"]).optional(),
+  url: z.string(),
+  thumbnailUrl: z.string().optional(),
+  duration: z.number().optional(),
+  voiceCommand: z.string().optional(),
+  gpsLat: z.number().optional(),
+  gpsLng: z.number().optional(),
+  deviceType: z.string().optional(),
+  metadata: z.string().optional(),
+});
+
+export type InsertQuickCapture = InferInsertModel<typeof quickCaptures>;
+export type QuickCapture = InferSelectModel<typeof quickCaptures>;

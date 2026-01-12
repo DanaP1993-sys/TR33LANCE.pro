@@ -14,9 +14,10 @@ import {
   type ArTelemetry, type InsertArTelemetry,
   type DeviceToken, type InsertDeviceToken,
   type PushAlert, type InsertPushAlert,
+  type QuickCapture, type InsertQuickCapture,
   users, jobs, contractors, disputes, notifications, directMessages,
   droneSurveys, treeSensors, sensorReadings, jobPhotos, contractorVerifications, aiEstimates,
-  arTelemetry, deviceTokens, pushAlerts
+  arTelemetry, deviceTokens, pushAlerts, quickCaptures
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -98,6 +99,12 @@ export interface IStorage {
   // Push Alerts
   getPushAlerts(): Promise<PushAlert[]>;
   createPushAlert(alert: InsertPushAlert): Promise<PushAlert>;
+  
+  // Quick Captures (AR Glasses)
+  getQuickCaptures(contractorId: string): Promise<QuickCapture[]>;
+  getQuickCapturesByJob(jobId: number): Promise<QuickCapture[]>;
+  createQuickCapture(capture: InsertQuickCapture): Promise<QuickCapture>;
+  deleteQuickCapture(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -461,6 +468,29 @@ export class DatabaseStorage implements IStorage {
   async createPushAlert(alert: InsertPushAlert): Promise<PushAlert> {
     const [newAlert] = await db.insert(pushAlerts).values(alert).returning();
     return newAlert;
+  }
+
+  // Quick Captures (AR Glasses)
+  async getQuickCaptures(contractorId: string): Promise<QuickCapture[]> {
+    return db.select().from(quickCaptures)
+      .where(eq(quickCaptures.contractorId, contractorId))
+      .orderBy(desc(quickCaptures.createdAt));
+  }
+
+  async getQuickCapturesByJob(jobId: number): Promise<QuickCapture[]> {
+    return db.select().from(quickCaptures)
+      .where(eq(quickCaptures.jobId, jobId))
+      .orderBy(desc(quickCaptures.createdAt));
+  }
+
+  async createQuickCapture(capture: InsertQuickCapture): Promise<QuickCapture> {
+    const [newCapture] = await db.insert(quickCaptures).values(capture).returning();
+    return newCapture;
+  }
+
+  async deleteQuickCapture(id: number): Promise<boolean> {
+    const result = await db.delete(quickCaptures).where(eq(quickCaptures.id, id)).returning();
+    return result.length > 0;
   }
 }
 

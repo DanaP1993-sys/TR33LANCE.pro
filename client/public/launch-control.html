@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree-Lance Launch Control</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #e0e0e0;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(30, 30, 50, 0.8);
+      border-radius: 20px;
+      border: 1px solid rgba(0, 255, 127, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      max-width: 500px;
+      width: 90%;
+    }
+    h1 {
+      color: #00ff7f;
+      font-size: 2rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(0, 255, 127, 0.5);
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+    }
+    .input-group {
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 15px 20px;
+      width: 100%;
+      max-width: 300px;
+      font-size: 16px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 127, 0.3);
+      border-radius: 10px;
+      color: #fff;
+      outline: none;
+      transition: all 0.3s;
+    }
+    input:focus {
+      border-color: #00ff7f;
+      box-shadow: 0 0 15px rgba(0, 255, 127, 0.3);
+    }
+    .launch-button {
+      padding: 25px 50px;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #ff4444, #cc0000);
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 5px 30px rgba(255, 68, 68, 0.5);
+      margin-top: 20px;
+    }
+    .launch-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 40px rgba(255, 68, 68, 0.7);
+    }
+    .launch-button:active {
+      transform: scale(0.98);
+    }
+    .launch-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .status {
+      margin-top: 30px;
+      padding: 15px;
+      border-radius: 10px;
+      display: none;
+    }
+    .status.success {
+      display: block;
+      background: rgba(0, 255, 127, 0.2);
+      border: 1px solid #00ff7f;
+      color: #00ff7f;
+    }
+    .status.error {
+      display: block;
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: #ff4444;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-top: 30px;
+    }
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 10px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #00ff7f;
+    }
+    .stat-label {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    .logo {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🌲🚀</div>
+    <h1>Tree-Lance Launch Control</h1>
+    <p class="subtitle">Emergency Broadcast System</p>
+
+    <div class="input-group">
+      <input id="adminPassword" type="password" placeholder="Admin Password" />
+    </div>
+
+    <button class="launch-button" id="launchButton">
+      🚨 LAUNCH NOW 🚨
+    </button>
+
+    <div class="status" id="status"></div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-value" id="deviceCount">-</div>
+        <div class="stat-label">Registered Devices</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="alertCount">-</div>
+        <div class="stat-label">Alerts Sent</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const launchButton = document.getElementById('launchButton');
+    const statusEl = document.getElementById('status');
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/push/alerts');
+        const data = await res.json();
+        document.getElementById('alertCount').textContent = data.total || 0;
+      } catch (e) {
+        console.error('Stats error:', e);
+      }
+    }
+
+    loadStats();
+
+    launchButton.addEventListener('click', async () => {
+      const password = document.getElementById('adminPassword').value;
+      if (!password) {
+        showStatus('Enter admin password!', 'error');
+        return;
+      }
+
+      launchButton.disabled = true;
+      launchButton.textContent = '⏳ LAUNCHING...';
+
+      try {
+        const loginRes = await fetch('/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        const loginData = await loginRes.json();
+        if (!loginData.token) {
+          showStatus('Invalid password!', 'error');
+          resetButton();
+          return;
+        }
+
+        const alertRes = await fetch('/send-launch-alert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + loginData.token
+          }
+        });
+
+        const alertData = await alertRes.json();
+
+        if (alertRes.ok) {
+          showStatus(`🚀 Launch alert sent to ${alertData.totalDevices} devices!`, 'success');
+          loadStats();
+        } else {
+          showStatus(alertData.error || 'Failed to send alert', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus('Failed to send launch alert!', 'error');
+      }
+
+      resetButton();
+    });
+
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'status ' + type;
+    }
+
+    function resetButton() {
+      launchButton.disabled = false;
+      launchButton.textContent = '🚨 LAUNCH NOW 🚨';
+    }
+  </script>
+</body>
+</html>

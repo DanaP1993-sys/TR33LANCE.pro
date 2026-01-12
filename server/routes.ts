@@ -1480,6 +1480,52 @@ export async function registerRoutes(
   // PUSH NOTIFICATION ENDPOINTS (Firebase FCM)
   // ============================================
 
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+  const ADMIN_SECRET = process.env.JWT_SECRET;
+
+  // Admin login for push notification control
+  app.post("/admin-login", (req, res) => {
+    if (!ADMIN_PASSWORD || !ADMIN_SECRET) {
+      return res.status(503).json({ error: "Admin login not configured. Set ADMIN_PASSWORD and JWT_SECRET environment variables." });
+    }
+
+    const { password } = req.body;
+
+    if (password === ADMIN_PASSWORD) {
+      const jwt = require("jsonwebtoken");
+      const token = jwt.sign({ admin: true, iat: Date.now() }, ADMIN_SECRET, { expiresIn: "12h" });
+      res.json({
+        success: true,
+        token,
+        expiresIn: "12 hours"
+      });
+    } else {
+      res.status(401).json({ error: "Invalid password" });
+    }
+  });
+
+  // Middleware to verify admin token
+  const verifyAdminToken = (req: any, res: any, next: any) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    try {
+      const jwt = require("jsonwebtoken");
+      const decoded = jwt.verify(token, ADMIN_SECRET);
+      if (decoded.admin) {
+        req.admin = decoded;
+        return next();
+      }
+      res.status(403).json({ error: "Unauthorized" });
+    } catch (err) {
+      res.status(403).json({ error: "Invalid or expired token" });
+    }
+  };
+
   // Register device token for push notifications
   app.post("/register-token", async (req, res) => {
     try {
@@ -1659,6 +1705,289 @@ export async function registerRoutes(
       res.json({ alerts, total: alerts.length });
     } catch (error: any) {
       res.status(500).json({ error: "Error fetching alerts" });
+    }
+  });
+
+  // ============================================
+  // QUICK CAPTURE ENDPOINTS (AR Smart Glasses)
+  // ============================================
+
+  // Voice command: "Take photo" - Quick capture photo
+  app.post("/api/ar/capture", upload.single("file"), async (req, res) => {
+    try {
+      const { contractorId, jobId, type, voiceCommand, gpsLat, gpsLng, deviceType, metadata } = req.body;
+
+      if (!contractorId) {
+        return res.status(400).json({ error: "contractorId required" });
+      }
+
+      // If no file uploaded, create a placeholder
+      let url = req.file ? `/uploads/${req.file.filename}` : `capture_${Date.now()}.jpg`;
+      let thumbnailUrl = url;
+
+      // Auto-detect active job if not specified
+      let activeJobId = jobId ? parseInt(jobId) : null;
+      if (!activeJobId) {
+        const jobs = await storage.getJobs();
+        const activeJob = jobs.find(j => j.contractorId === contractorId && j.status === "in_progress");
+        activeJobId = activeJob?.id || null;
+      }
+
+      const capture = await storage.createQuickCapture({
+        contractorId,
+        jobId: activeJobId,
+        type: type || "photo",
+        url,
+        thumbnailUrl,
+        voiceCommand: voiceCommand || "Take photo",
+        gpsLat: gpsLat ? parseFloat(gpsLat) : null,
+        gpsLng: gpsLng ? parseFloat(gpsLng) : null,
+        deviceType: deviceType || "mobile_ar",
+        metadata: metadata || null,
+      });
+
+      // Broadcast capture to job subscribers
+      if (activeJobId) {
+        broadcastJobUpdate(activeJobId, {
+          type: "quick_capture",
+          capture,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      console.log(`📸 Quick capture: ${type || "photo"} by ${contractorId} (Job: ${activeJobId || "none"})`);
+
+      res.json({
+        success: true,
+        capture,
+        message: `${type === "video" ? "Video" : "Photo"} captured successfully`,
+        audioResponse: `${type === "video" ? "Video" : "Photo"} saved to job documentation`,
+      });
+    } catch (error: any) {
+      console.error("Quick capture error:", error.message);
+      res.status(500).json({ error: "Capture failed" });
+    }
+  });
+
+  // Voice command: "Record video" - Start video recording
+  app.post("/api/ar/capture/video", upload.single("file"), async (req, res) => {
+    try {
+      const { contractorId, jobId, duration, voiceCommand, gpsLat, gpsLng, deviceType } = req.body;
+
+      if (!contractorId) {
+        return res.status(400).json({ error: "contractorId required" });
+      }
+
+      let url = req.file ? `/uploads/${req.file.filename}` : `video_${Date.now()}.mp4`;
+
+      // Auto-detect active job
+      let activeJobId = jobId ? parseInt(jobId) : null;
+      if (!activeJobId) {
+        const jobs = await storage.getJobs();
+        const activeJob = jobs.find(j => j.contractorId === contractorId && j.status === "in_progress");
+        activeJobId = activeJob?.id || null;
+      }
+
+      const capture = await storage.createQuickCapture({
+        contractorId,
+        jobId: activeJobId,
+        type: "video",
+        url,
+        duration: duration ? parseFloat(duration) : null,
+        voiceCommand: voiceCommand || "Record video",
+        gpsLat: gpsLat ? parseFloat(gpsLat) : null,
+        gpsLng: gpsLng ? parseFloat(gpsLng) : null,
+        deviceType: deviceType || "mobile_ar",
+      });
+
+      if (activeJobId) {
+        broadcastJobUpdate(activeJobId, {
+          type: "quick_capture",
+          capture,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      console.log(`🎥 Video captured: ${duration || "unknown"}s by ${contractorId}`);
+
+      res.json({
+        success: true,
+        capture,
+        message: "Video recorded successfully",
+        audioResponse: `Video recorded. Duration: ${duration || "unknown"} seconds`,
+      });
+    } catch (error: any) {
+      console.error("Video capture error:", error.message);
+      res.status(500).json({ error: "Video capture failed" });
+    }
+  });
+
+  // Get all captures for a contractor
+  app.get("/api/ar/captures/:contractorId", async (req, res) => {
+    try {
+      const captures = await storage.getQuickCaptures(req.params.contractorId);
+      res.json({ captures, total: captures.length });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch captures" });
+    }
+  });
+
+  // Get all captures for a job
+  app.get("/api/jobs/:jobId/captures", async (req, res) => {
+    try {
+      const captures = await storage.getQuickCapturesByJob(parseInt(req.params.jobId));
+      res.json({ captures, total: captures.length });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch job captures" });
+    }
+  });
+
+  // Delete a capture
+  app.delete("/api/ar/captures/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteQuickCapture(parseInt(req.params.id));
+      if (deleted) {
+        res.json({ success: true, message: "Capture deleted" });
+      } else {
+        res.status(404).json({ error: "Capture not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete capture" });
+    }
+  });
+
+  // Voice command processor for AR glasses
+  app.post("/api/ar/voice-command", async (req, res) => {
+    try {
+      const { contractorId, command, gpsLat, gpsLng, deviceType } = req.body;
+
+      if (!contractorId || !command) {
+        return res.status(400).json({ error: "contractorId and command required" });
+      }
+
+      const normalizedCommand = command.toLowerCase().trim();
+      let response: any = { recognized: false };
+
+      // Find active job
+      const jobs = await storage.getJobs();
+      const activeJob = jobs.find(j => j.contractorId === contractorId && j.status === "in_progress");
+
+      // Process voice commands
+      if (normalizedCommand.includes("take photo") || normalizedCommand.includes("capture photo") || normalizedCommand.includes("snap")) {
+        const capture = await storage.createQuickCapture({
+          contractorId,
+          jobId: activeJob?.id || null,
+          type: "photo",
+          url: `voice_photo_${Date.now()}.jpg`,
+          voiceCommand: command,
+          gpsLat: gpsLat || null,
+          gpsLng: gpsLng || null,
+          deviceType: deviceType || "ar_glasses",
+        });
+
+        response = {
+          recognized: true,
+          action: "photo_captured",
+          capture,
+          audioResponse: "Photo captured and saved to job documentation",
+          visualFeedback: "green_flash",
+        };
+
+        if (activeJob) {
+          broadcastJobUpdate(activeJob.id, { type: "quick_capture", capture });
+        }
+
+      } else if (normalizedCommand.includes("record video") || normalizedCommand.includes("start recording") || normalizedCommand.includes("video")) {
+        response = {
+          recognized: true,
+          action: "video_recording_started",
+          audioResponse: "Video recording started. Say 'stop recording' when done.",
+          visualFeedback: "red_recording_indicator",
+          recordingState: "active",
+        };
+
+      } else if (normalizedCommand.includes("stop recording") || normalizedCommand.includes("end video")) {
+        const capture = await storage.createQuickCapture({
+          contractorId,
+          jobId: activeJob?.id || null,
+          type: "video",
+          url: `voice_video_${Date.now()}.mp4`,
+          voiceCommand: command,
+          gpsLat: gpsLat || null,
+          gpsLng: gpsLng || null,
+          deviceType: deviceType || "ar_glasses",
+        });
+
+        response = {
+          recognized: true,
+          action: "video_recording_stopped",
+          capture,
+          audioResponse: "Video saved to job documentation",
+          visualFeedback: "green_flash",
+          recordingState: "stopped",
+        };
+
+        if (activeJob) {
+          broadcastJobUpdate(activeJob.id, { type: "quick_capture", capture });
+        }
+
+      } else if (normalizedCommand.includes("what's next") || normalizedCommand.includes("next task")) {
+        let recommendation = "";
+        if (activeJob) {
+          recommendation = `Continue working on: ${activeJob.description}`;
+        } else {
+          const pendingJobs = jobs.filter(j => j.status === "requested");
+          recommendation = pendingJobs.length > 0 
+            ? `You have ${pendingJobs.length} pending jobs. Accept one to begin.`
+            : "No pending jobs. Check the dashboard for new requests.";
+        }
+
+        response = {
+          recognized: true,
+          action: "next_task_info",
+          audioResponse: recommendation,
+          activeJob: activeJob || null,
+        };
+
+      } else if (normalizedCommand.includes("current location") || normalizedCommand.includes("my location")) {
+        response = {
+          recognized: true,
+          action: "location_reported",
+          audioResponse: `Your current location is ${gpsLat?.toFixed(4) || "unknown"}, ${gpsLng?.toFixed(4) || "unknown"}`,
+          location: { lat: gpsLat, lng: gpsLng },
+        };
+
+      } else if (normalizedCommand.includes("mark complete") || normalizedCommand.includes("job complete") || normalizedCommand.includes("finish job")) {
+        if (activeJob) {
+          await storage.updateJob(activeJob.id, { status: "completed" });
+          broadcastJobUpdate(activeJob.id, { type: "status_update", status: "completed" });
+
+          response = {
+            recognized: true,
+            action: "job_completed",
+            audioResponse: "Job marked as complete. Great work!",
+            jobId: activeJob.id,
+          };
+        } else {
+          response = {
+            recognized: true,
+            action: "no_active_job",
+            audioResponse: "No active job to complete.",
+          };
+        }
+
+      } else {
+        response = {
+          recognized: false,
+          audioResponse: "Command not recognized. Try: take photo, record video, what's next, or mark complete.",
+          availableCommands: ["take photo", "record video", "stop recording", "what's next", "current location", "mark complete"],
+        };
+      }
+
+      res.json(response);
+    } catch (error: any) {
+      console.error("Voice command error:", error.message);
+      res.status(500).json({ error: "Voice command processing failed" });
     }
   });
 
