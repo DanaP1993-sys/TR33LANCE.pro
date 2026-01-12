@@ -1,0 +1,103 @@
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const admin = require('firebase-admin');
+const cors = require('cors');
+const { MongoClient } = require('mongodb');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
+
+// Initialize Firebase Admin
+const serviceAccount = require('./firebase-service-account.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// MongoDB Setup
+const client = new MongoClient(process.env.MONGO_URI);
+let tokensCollection, alertsCollection;
+
+client.connect().then(() => {
+  const db = client.db('TreeLanceDB');
+  tokensCollection = db.collection('device_tokens');
+  alertsCollection = db.collection('alerts');
+  console.log('MongoDB connected');
+});
+
+// Simple Admin Auth Middleware
+const ADMIN_SECRET = process.env.ADMIN_SECRET || 'SUPERSECRET';
+
+function verifyAdmin(req, res, next) {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).send('No token provided');
+  try {
+    const decoded = jwt.verify(token, ADMIN_SECRET);
+    if (decoded.admin) return next();
+    res.status(403).send('Unauthorized');
+  } catch {
+    res.status(403).send('Unauthorized');
+  }
+}
+
+// Register device token
+app.post('/register-token', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).send('Token required');
+  try {
+    await tokensCollection.updateOne({ token }, { $set: { token } }, { upsert: true });
+    res.send('Token registered successfully');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error registering token');
+  }
+});
+
+// Admin login (simplified)
+app.post('/admin-login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign({ admin: true }, ADMIN_SECRET, { expiresIn: '12h' });
+    res.send({ token });
+  } else {
+    res.status(401).send('Invalid password');
+  }
+});
+
+// Send global alert
+app.post('/send-alert', verifyAdmin, async (req, res) => {
+  const { title, message, link } = req.body;
+  if (!title || !message || !link) return res.status(400).send('Missing fields');
+
+  try {
+    const deviceTokens = await tokensCollection.find({}).toArray();
+    const tokens = deviceTokens.map(t => t.token);
+
+    if (tokens.length === 0) return res.status(400).send('No devices registered');
+
+    const payload = {
+      notification: { title, body: message, click_action: link },
+      android: { priority: 'high', notification: { click_action: 'FLUTTER_NOTIFICATION_CLICK' } },
+      apns: { payload: { aps: { alert: { title, body: message }, sound: 'default' } } },
+    };
+
+    // Batch sending in chunks of 500 (FCM limit)
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+      const batchTokens = tokens.slice(i, i + BATCH_SIZE);
+      await admin.messaging().sendToDevice(batchTokens, payload);
+    }
+
+    // Save alert log
+    await alertsCollection.insertOne({ title, message, link, date: new Date(), sentTo: tokens.length });
+
+    res.send({ message: 'Global alert sent successfully!', totalDevices: tokens.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error sending alert');
+  }
+});
+
+app.listen(5000, () => console.log('Server running on port 5000'));
